@@ -52,16 +52,16 @@
  */
 class FECModel : public BiConnector {
 public:
-	FECModel();
-	virtual void recv(Packet*, Handler*);
+    FECModel();
+    virtual void recv(Packet*, Handler*);
+
 protected:
-	virtual int command(int argc, const char*const* argv);
-	void addfec(Packet *p);
-	void subfec(Packet *p);
-	int firstTime_;		// to not corrupt first packet in byte model
-	int FECstrength_;       // indicate how many corrupted bits are corrected
-	int FECbyte_;
-	int debug_;
+    virtual int command(int argc, const char* const* argv);
+    void addfec(Packet* p);
+    void subfec(Packet* p);
+    int firstTime_; // to not corrupt first packet in byte model
+    int FECstrength_; // indicate how many corrupted bits are corrected
+    int FECbyte_;
+    int debug_;
 };
 #endif
-

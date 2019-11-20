@@ -69,38 +69,46 @@
 //#include "docsislink.h"
 
 static class sfqCoDelClass : public TclClass {
-  public:
-    sfqCoDelClass() : TclClass("Queue/sfqCoDel") {}
-    TclObject* create(int, const char*const*) {
+public:
+    sfqCoDelClass()
+        : TclClass("Queue/sfqCoDel")
+    {
+    }
+    TclObject* create(int, const char* const*)
+    {
         return (new sfqCoDelQueue);
     }
 } class_codel;
 
-sfqCoDelQueue::sfqCoDelQueue() :  maxbins_(MAXBINS), quantum_(0), tchan_(0), isolate_(0)
+sfqCoDelQueue::sfqCoDelQueue()
+    : maxbins_(MAXBINS)
+    , quantum_(0)
+    , tchan_(0)
+    , isolate_(0)
 {
     bind("interval_", &interval_);
-    bind("target_", &target_);  // target min delay in clock ticks
-    bind("curq_", &curq_);      // current queue size in bytes
-    bind("d_exp_", &d_exp_);    // current delay experienced in clock ticks
-    bind("maxbins_", &maxbins_);    // tcl settable max number of bins
-    bind("quantum_", &quantum_);    // tcl settable quantum value for byte rounding
-					// if zero, rounds by packets
+    bind("target_", &target_); // target min delay in clock ticks
+    bind("curq_", &curq_); // current queue size in bytes
+    bind("d_exp_", &d_exp_); // current delay experienced in clock ticks
+    bind("maxbins_", &maxbins_); // tcl settable max number of bins
+    bind("quantum_", &quantum_); // tcl settable quantum value for byte rounding
+        // if zero, rounds by packets
     bind("control_packets_", &control_packets_);
     bind("sourcedest_fq_", &sourcedest_fq_);
 
-   if (maxbins_ > MAXBINS)  {
+    if (maxbins_ > MAXBINS) {
         printf("sfqCoDel: maxbins_ of %d exceeds upper bound of %d", maxbins_, MAXBINS);
-	exit(0);
+        exit(0);
     }
 
-    for(int i=0; i<maxbins_; i++) {
-     bin_[i].q_ = new PacketQueue();
-     bin_[i].first_above_time_ = -1;
-     bin_[i].dropping_ = 0;
-     bin_[i].count_ = 0;
-     bin_[i].newflag = 0;
-     bin_[i].index = i;
-     bin_[i].on_sched_ = 0;
+    for (int i = 0; i < maxbins_; i++) {
+        bin_[i].q_ = new PacketQueue();
+        bin_[i].first_above_time_ = -1;
+        bin_[i].dropping_ = 0;
+        bin_[i].count_ = 0;
+        bin_[i].newflag = 0;
+        bin_[i].index = i;
+        bin_[i].on_sched_ = 0;
     }
     pq_ = bin_[0].q_; //does ns need this?
     reset();
@@ -127,92 +135,91 @@ void sfqCoDelQueue::reset()
 
 void sfqCoDelQueue::enque(Packet* pkt)
 {
-	// check for full buffer
-	if(curlen_ >= qlim_) {
-	   //total buffer is full, drop from largest so find maxbin
-	   // maxbinid_ is either 0 or the id of the last max
-	   // trying to make sure pick a different bin of the same size
-	   int m = maxbinid_;
-	   for(int j=0; j<maxbins_; j++)
-	       if( j != maxbinid_ && bin_[j].on_sched_ && (bin_[j].q_)->length() >= (bin_[m].q_)->length()) {
-		   m = j;
-	   }
-	   maxbinid_ = m;
-
-	   //tail drop from maxbinid_ (use head() for td)
-	   Packet* p = (bin_[maxbinid_].q_)->tail();
-	   curq_ -= HDR_CMN(p)->size();
-	   curlen_--;
-	   (bin_[maxbinid_].q_)->remove(p);	//where packet is actually removed
-	   drop(p);
-	}
-
-	HDR_CMN(pkt)->ts_ = Scheduler::instance().clock();
-	curlen_++;
-	curq_ += HDR_CMN(pkt)->size();
-
-	// experimental code to isolate packets marked CBR which are
-	// all voice packets in our simulations
-	unsigned int i;
-	if(isolate_) {
-	if(HDR_CMN(pkt)->ptype() == PT_CBR)
-		i = (maxbins_ -1);
-	else
-		i = hash(pkt) % (maxbins_ - 1);
-	} else {
-          // Determine which bin to enqueue the packet and add it to that bin.
-	  // the bin's id comes from a hash of its header
-          if(!control_packets_) {
-	    i = hash(pkt) % maxbins_;
-          }
-          else {
-            if(HDR_CMN(pkt)->size() >= 1460) {
-	      i = (hash(pkt) % (maxbins_ - 1)) + 1;
+    // check for full buffer
+    if (curlen_ >= qlim_) {
+        //total buffer is full, drop from largest so find maxbin
+        // maxbinid_ is either 0 or the id of the last max
+        // trying to make sure pick a different bin of the same size
+        int m = maxbinid_;
+        for (int j = 0; j < maxbins_; j++)
+            if (j != maxbinid_ && bin_[j].on_sched_ && (bin_[j].q_)->length() >= (bin_[m].q_)->length()) {
+                m = j;
             }
-            else {
-              i = 0;
+        maxbinid_ = m;
+
+        //tail drop from maxbinid_ (use head() for td)
+        Packet* p = (bin_[maxbinid_].q_)->tail();
+        curq_ -= HDR_CMN(p)->size();
+        curlen_--;
+        (bin_[maxbinid_].q_)->remove(p); //where packet is actually removed
+        drop(p);
+    }
+
+    HDR_CMN(pkt)->ts_ = Scheduler::instance().clock();
+    curlen_++;
+    curq_ += HDR_CMN(pkt)->size();
+
+    // experimental code to isolate packets marked CBR which are
+    // all voice packets in our simulations
+    unsigned int i;
+    if (isolate_) {
+        if (HDR_CMN(pkt)->ptype() == PT_CBR)
+            i = (maxbins_ - 1);
+        else
+            i = hash(pkt) % (maxbins_ - 1);
+    } else {
+        // Determine which bin to enqueue the packet and add it to that bin.
+        // the bin's id comes from a hash of its header
+        if (!control_packets_) {
+            i = hash(pkt) % maxbins_;
+        } else {
+            if (HDR_CMN(pkt)->size() >= 1460) {
+                i = (hash(pkt) % (maxbins_ - 1)) + 1;
+            } else {
+                i = 0;
             }
-          }
         }
-	(bin_[i].q_)->enque(pkt);
+    }
+    (bin_[i].q_)->enque(pkt);
 
-	//if it's the only bin in use, set binsched_
-        if(binsched_ == NULL) {
-          binsched_ = &(bin_[i]);
-          bin_[i].prev = &(bin_[i]);
-          bin_[i].next = bin_[i].prev;
-          bin_[i].newflag = 1;
-          bin_[i].on_sched_ = 1;
-	  if(quantum_ > 0)	//if rounding by bytes
-             bin_[i].deficit_ = quantum_;
-        } else if( bin_[i].on_sched_ == 0) {
-	//if bin was not on the schedule, add to the list before continuing
+    //if it's the only bin in use, set binsched_
+    if (binsched_ == NULL) {
+        binsched_ = &(bin_[i]);
+        bin_[i].prev = &(bin_[i]);
+        bin_[i].next = bin_[i].prev;
+        bin_[i].newflag = 1;
+        bin_[i].on_sched_ = 1;
+        if (quantum_ > 0) //if rounding by bytes
+            bin_[i].deficit_ = quantum_;
+    } else if (bin_[i].on_sched_ == 0) {
+        //if bin was not on the schedule, add to the list before continuing
         // bins but after other new bins
-          bindesc* b = binsched_;
-          while(b->newflag == 1) {
-            if(b->next == binsched_) break;
+        bindesc* b = binsched_;
+        while (b->newflag == 1) {
+            if (b->next == binsched_)
+                break;
             b = b->next;
-          }
-          if(b->next == binsched_) {
-             //insert at end
-             b->next = &(bin_[i]);
-             bin_[i].prev = b;
-             bin_[i].next = binsched_;
-             binsched_->prev = &(bin_[i]);
-          } else {
-	     //insert in front of b
-             bin_[i].next = b;
-             bin_[i].prev = b->prev;
-             (b->prev)->next = &(bin_[i]);
-             b->prev = &(bin_[i]);
-	     if(b == binsched_)
-		binsched_ = &(bin_[i]);
-          }
-          bin_[i].newflag = 1;
-          bin_[i].on_sched_ = 1;
-	  if(quantum_ > 0)	//if rounding by bytes
-             bin_[i].deficit_ = quantum_;
-	}
+        }
+        if (b->next == binsched_) {
+            //insert at end
+            b->next = &(bin_[i]);
+            bin_[i].prev = b;
+            bin_[i].next = binsched_;
+            binsched_->prev = &(bin_[i]);
+        } else {
+            //insert in front of b
+            bin_[i].next = b;
+            bin_[i].prev = b->prev;
+            (b->prev)->next = &(bin_[i]);
+            b->prev = &(bin_[i]);
+            if (b == binsched_)
+                binsched_ = &(bin_[i]);
+        }
+        bin_[i].newflag = 1;
+        bin_[i].on_sched_ = 1;
+        if (quantum_ > 0) //if rounding by bytes
+            bin_[i].deficit_ = quantum_;
+    }
 }
 
 extern "C" {
@@ -228,48 +235,63 @@ extern "C" {
  * My best guess at if you are big-endian or little-endian.  This may
  * need adjustment.
  */
-#if (defined(__BYTE_ORDER) && defined(__LITTLE_ENDIAN) && \
-     __BYTE_ORDER == __LITTLE_ENDIAN) || \
-    (defined(i386) || defined(__i386__) || defined(__i486__) || \
-     defined(__i586__) || defined(__i686__) || defined(vax) || defined(MIPSEL))
-# define HASH_LITTLE_ENDIAN 1
-# define HASH_BIG_ENDIAN 0
-#elif (defined(__BYTE_ORDER) && defined(__BIG_ENDIAN) && \
-       __BYTE_ORDER == __BIG_ENDIAN) || \
-      (defined(sparc) || defined(POWERPC) || defined(mc68000) || defined(sel))
-# define HASH_LITTLE_ENDIAN 0
-# define HASH_BIG_ENDIAN 1
+#if (defined(__BYTE_ORDER) && defined(__LITTLE_ENDIAN) && __BYTE_ORDER == __LITTLE_ENDIAN) || (defined(i386) || defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(vax) || defined(MIPSEL))
+#define HASH_LITTLE_ENDIAN 1
+#define HASH_BIG_ENDIAN 0
+#elif (defined(__BYTE_ORDER) && defined(__BIG_ENDIAN) && __BYTE_ORDER == __BIG_ENDIAN) || (defined(sparc) || defined(POWERPC) || defined(mc68000) || defined(sel))
+#define HASH_LITTLE_ENDIAN 0
+#define HASH_BIG_ENDIAN 1
 #else
-# define HASH_LITTLE_ENDIAN 0
-# define HASH_BIG_ENDIAN 0
+#define HASH_LITTLE_ENDIAN 0
+#define HASH_BIG_ENDIAN 0
 #endif
 
-#define hashsize(n) ((u_int32_t)1<<(n))
-#define hashmask(n) (hashsize(n)-1)
-#define rot(x,k) (((x)<<(k)) | ((x)>>(32-(k))))
+#define hashsize(n) ((u_int32_t)1 << (n))
+#define hashmask(n) (hashsize(n) - 1)
+#define rot(x, k) (((x) << (k)) | ((x) >> (32 - (k))))
 
-#define mix(a,b,c) \
-{ \
-  a -= c;  a ^= rot(c, 4);  c += b; \
-  b -= a;  b ^= rot(a, 6);  a += c; \
-  c -= b;  c ^= rot(b, 8);  b += a; \
-  a -= c;  a ^= rot(c,16);  c += b; \
-  b -= a;  b ^= rot(a,19);  a += c; \
-  c -= b;  c ^= rot(b, 4);  b += a; \
-}
+#define mix(a, b, c)     \
+    {                    \
+        a -= c;          \
+        a ^= rot(c, 4);  \
+        c += b;          \
+        b -= a;          \
+        b ^= rot(a, 6);  \
+        a += c;          \
+        c -= b;          \
+        c ^= rot(b, 8);  \
+        b += a;          \
+        a -= c;          \
+        a ^= rot(c, 16); \
+        c += b;          \
+        b -= a;          \
+        b ^= rot(a, 19); \
+        a += c;          \
+        c -= b;          \
+        c ^= rot(b, 4);  \
+        b += a;          \
+    }
 
-#define final(a,b,c) \
-{ \
-  c ^= b; c -= rot(b,14); \
-  a ^= c; a -= rot(c,11); \
-  b ^= a; b -= rot(a,25); \
-  c ^= b; c -= rot(b,16); \
-  a ^= c; a -= rot(c,4);  \
-  b ^= a; b -= rot(a,14); \
-  c ^= b; c -= rot(b,24); \
-}
+#define final(a, b, c)   \
+    {                    \
+        c ^= b;          \
+        c -= rot(b, 14); \
+        a ^= c;          \
+        a -= rot(c, 11); \
+        b ^= a;          \
+        b -= rot(a, 25); \
+        c ^= b;          \
+        c -= rot(b, 16); \
+        a ^= c;          \
+        a -= rot(c, 4);  \
+        b ^= a;          \
+        b -= rot(a, 14); \
+        c ^= b;          \
+        c -= rot(b, 24); \
+    }
 
-static inline u_int32_t jhash_3words( u_int32_t a, u_int32_t b, u_int32_t c, u_int32_t i) {
+static inline u_int32_t jhash_3words(u_int32_t a, u_int32_t b, u_int32_t c, u_int32_t i)
+{
     i += 0xdeadbeef + (3 << 2);
     a += i;
     b += i;
@@ -281,18 +303,17 @@ static inline u_int32_t jhash_3words( u_int32_t a, u_int32_t b, u_int32_t c, u_i
 
 #undef mix
 #undef final
-
 }
 
 unsigned int sfqCoDelQueue::hash(Packet* pkt)
 {
-  hdr_ip* iph = hdr_ip::access(pkt);
-  if(sourcedest_fq_) {
-    //doing only source-dest based fair queuing
-    return jhash_3words(iph->daddr(), iph->saddr(), 1, 0); // not very accurate
-  }
-  return jhash_3words(iph->daddr(), iph->saddr(),
-                      (iph->dport() << 16) | iph->sport(), 0);
+    hdr_ip* iph = hdr_ip::access(pkt);
+    if (sourcedest_fq_) {
+        //doing only source-dest based fair queuing
+        return jhash_3words(iph->daddr(), iph->saddr(), 1, 0); // not very accurate
+    }
+    return jhash_3words(iph->daddr(), iph->saddr(),
+        (iph->dport() << 16) | iph->sport(), 0);
 }
 
 // return the time of the next drop relative to 't'
@@ -310,7 +331,7 @@ dodequeResult sfqCoDelQueue::dodeque(PacketQueue* q)
 
     r.p = q->deque();
     if (r.p == NULL) {
-	first_above_time_ = 0;
+        first_above_time_ = 0;
     } else {
         // d_exp_ and curq_ are ns2 'traced variables' that allow the dynamic
         // queue behavior that drives CoDel to be captured in a trace file for
@@ -319,13 +340,13 @@ dodequeResult sfqCoDelQueue::dodeque(PacketQueue* q)
         d_exp_ = now - HDR_CMN(r.p)->ts_;
         curlen_--;
         curq_ -= HDR_CMN(r.p)->size_;
-	maxpacket_ = mtu_max_;
+        maxpacket_ = mtu_max_;
         if (maxpacket_ < HDR_CMN(r.p)->size_)
             // keep track of the max packet size.
             maxpacket_ = HDR_CMN(r.p)->size_;
 
-	mtu_max_ = maxpacket_;
-	/* experimental code to work with docsis mac model and not drop
+        mtu_max_ = maxpacket_;
+        /* experimental code to work with docsis mac model and not drop
 	   packets with pending tokens (see note on bursty macs)
 	int tk = DocsisLink::tokens_;
 	if(tk > maxpacket_)
@@ -344,19 +365,19 @@ dodequeResult sfqCoDelQueue::dodeque(PacketQueue* q)
         // the amount that arrives in a typical interarrival time (one MSS-sized
         // packet arriving spaced by the amount of time it takes to send such
         // a packet on the bottleneck). The 2nd term of the "if" does this.
-	// Note that we use the overall value of curq_, across all bins
-	// Add a test for this queue being empty though
+        // Note that we use the overall value of curq_, across all bins
+        // Add a test for this queue being empty though
 
         if (d_exp_ < target_ || curq_ <= maxpacket_ || q->length() == 0) {
             // went below - stay below for at least interval
             first_above_time_ = 0;
         } else {
-	    //hdr_tcp *tcph = hdr_tcp::access(r.p);
-	    //printf("%lf: Packet with seq %d saw a delay above target, first_above_time is %lf\n", Scheduler::instance().clock(), tcph->seqno(), first_above_time_); 
+            //hdr_tcp *tcph = hdr_tcp::access(r.p);
+            //printf("%lf: Packet with seq %d saw a delay above target, first_above_time is %lf\n", Scheduler::instance().clock(), tcph->seqno(), first_above_time_);
             if (first_above_time_ == 0) {
                 //just went above from below. if still above at first_above_time
                 // will say it’s ok to drop
-                 first_above_time_ = now + interval_;
+                first_above_time_ = now + interval_;
             } else if (now >= first_above_time_) {
                 r.ok_to_drop = 1;
             }
@@ -374,53 +395,56 @@ bindesc* sfqCoDelQueue::readybin()
     //get the next scheduled bin that has a non-empty queue,
     // set the binsched_ to that bin,
     // if none,  return NULL
-    if(binsched_ == NULL) return NULL;
+    if (binsched_ == NULL)
+        return NULL;
 
     bindesc* b = binsched_;
-    while((b->q_)->length() == 0) {
-	b = removebin(b);	//clean up, remove bin from schedule
-	if(b == NULL) return b;
+    while ((b->q_)->length() == 0) {
+        b = removebin(b); //clean up, remove bin from schedule
+        if (b == NULL)
+            return b;
     }
 
     // if get here, b = binsched_ and points to a non-empty queue
     //if rounding by packets, return now
-    if(quantum_ == 0)
-       return binsched_;
+    if (quantum_ == 0)
+        return binsched_;
 
     // guaranteed that at least this bin has a packet. If it has a deficit, it
-    // will get more bytes go to end. If it's the only one, it will get sent 
-    while(b->deficit_ <= 0) {
-	b->deficit_ += quantum_;
-	b = b->next;
-  	while((b->q_)->length() == 0) {	// find next non-empty bin
-         b = b->next;
-	}
+    // will get more bytes go to end. If it's the only one, it will get sent
+    while (b->deficit_ <= 0) {
+        b->deficit_ += quantum_;
+        b = b->next;
+        while ((b->q_)->length() == 0) { // find next non-empty bin
+            b = b->next;
+        }
     }
     binsched_ = b;
 
     return binsched_;
 }
 
-bindesc* sfqCoDelQueue::removebin(bindesc* b) {
+bindesc* sfqCoDelQueue::removebin(bindesc* b)
+{
 
-      //clean up, remove bin from schedule
-      if(b->next == b) {
-         //means this was the only bin on the schedule, so empty the schedule
-         b->next = NULL;
-         b->prev = NULL;
-	 b->dropping_ = 0;
-	 b->on_sched_ = 0;
-         binsched_ = NULL;
-      } else {
-	 b->dropping_ = 0;
-	 b->on_sched_ = 0;
-         binsched_ = b->next;
-         binsched_->prev = b->prev;
-         (b->prev)->next = binsched_;
-         b->next = b->prev = NULL;
-         b = binsched_;
-      }
-      return binsched_;
+    //clean up, remove bin from schedule
+    if (b->next == b) {
+        //means this was the only bin on the schedule, so empty the schedule
+        b->next = NULL;
+        b->prev = NULL;
+        b->dropping_ = 0;
+        b->on_sched_ = 0;
+        binsched_ = NULL;
+    } else {
+        b->dropping_ = 0;
+        b->on_sched_ = 0;
+        binsched_ = b->next;
+        binsched_->prev = b->prev;
+        (b->prev)->next = binsched_;
+        b->next = b->prev = NULL;
+        b = binsched_;
+    }
+    return binsched_;
 }
 
 // All of the work of CoDel is done here. There are two branches: In packet
@@ -434,124 +458,124 @@ Packet* sfqCoDelQueue::deque()
     double now = Scheduler::instance().clock();
     bindesc* b;
     dodequeResult r;
-   
-    if(control_packets_) {
-      if((bin_[0].q_)->length() > 0) {
-          Packet *pkt;
-          pkt = (bin_[0].q_)->deque();
-          curlen_--;
-          curq_ -= HDR_CMN(pkt)->size();
-          return pkt;
-       } 
 
-
-   }
-
-
-   do {
-   //have to check all bins until find a packet (or there are none)
-    if( (b = readybin()) == NULL) return NULL;
-
-    //set up to use the same dodeque() as regular CoDel
-    b->newflag = 0;
-    first_above_time_ = b->first_above_time_;
-    drop_next_ = b->drop_next_;
-    count_ = b->count_;
-    dropping_ = b->dropping_;
-    r = dodeque( b->q_ );
-    b->newflag = 0;
-
-    //There has to be a packet because readybin() returned a bin
-    if(r.p == NULL) printf("sfqCoDelQueue::deque(): error\n");
-
-    if (dropping_) {
-        if (! r.ok_to_drop) {
-            // sojourn time below target - leave dropping state
-	    //    and send this bin's packet
-	    //hdr_tcp *tcph = hdr_tcp::access(r.p);
-	    //printf("%lf: Exiting dropping mode with seq %d\n", Scheduler::instance().clock(), tcph->seqno()); 
-            dropping_ = 0;
+    if (control_packets_) {
+        if ((bin_[0].q_)->length() > 0) {
+            Packet* pkt;
+            pkt = (bin_[0].q_)->deque();
+            curlen_--;
+            curq_ -= HDR_CMN(pkt)->size();
+            return pkt;
         }
-        // It’s time for the next drop. Drop the current packet and dequeue
-        // the next.  If the dequeue doesn't take us out of dropping state,
-        // schedule the next drop. A large backlog might result in drop
-        // rates so high that the next drop should happen now, hence the
-        // ‘while’ loop.
-        while (now >= drop_next_ && dropping_) {
-	    hdr_tcp *tcph = hdr_tcp::access(r.p);
-	    hdr_ip *iph = hdr_ip::access(r.p);
-	    //printf("%lf: %d: Dropping packet with seq %d\n", Scheduler::instance().clock(), iph->flowid(), tcph->seqno()); 
+    }
+
+    do {
+        //have to check all bins until find a packet (or there are none)
+        if ((b = readybin()) == NULL)
+            return NULL;
+
+        //set up to use the same dodeque() as regular CoDel
+        b->newflag = 0;
+        first_above_time_ = b->first_above_time_;
+        drop_next_ = b->drop_next_;
+        count_ = b->count_;
+        dropping_ = b->dropping_;
+        r = dodeque(b->q_);
+        b->newflag = 0;
+
+        //There has to be a packet because readybin() returned a bin
+        if (r.p == NULL)
+            printf("sfqCoDelQueue::deque(): error\n");
+
+        if (dropping_) {
+            if (!r.ok_to_drop) {
+                // sojourn time below target - leave dropping state
+                //    and send this bin's packet
+                //hdr_tcp *tcph = hdr_tcp::access(r.p);
+                //printf("%lf: Exiting dropping mode with seq %d\n", Scheduler::instance().clock(), tcph->seqno());
+                dropping_ = 0;
+            }
+            // It’s time for the next drop. Drop the current packet and dequeue
+            // the next.  If the dequeue doesn't take us out of dropping state,
+            // schedule the next drop. A large backlog might result in drop
+            // rates so high that the next drop should happen now, hence the
+            // ‘while’ loop.
+            while (now >= drop_next_ && dropping_) {
+                hdr_tcp* tcph = hdr_tcp::access(r.p);
+                hdr_ip* iph = hdr_ip::access(r.p);
+                //printf("%lf: %d: Dropping packet with seq %d\n", Scheduler::instance().clock(), iph->flowid(), tcph->seqno());
+                drop(r.p);
+                r = dodeque(b->q_);
+
+                //if drop emptied queue, it gets to be new on next arrival
+                // and want to move on to next bin to find a packet to send
+                if (r.p == NULL) {
+                    b->count_ = count_;
+                    b->drop_next_ = drop_next_;
+                    b->first_above_time_ = 0;
+                    removebin(b);
+                }
+
+                if (!r.ok_to_drop) {
+                    // leave dropping state
+                    dropping_ = 0;
+                } else {
+                    // schedule the next drop.
+                    ++count_;
+                    drop_next_ = control_law(drop_next_);
+                    //printf("%lf: Count = %d; drop_next = %lf \n", Scheduler::instance().clock(), count_, drop_next_);
+                }
+            }
+
+            // If we get here we’re not in dropping state. 'ok_to_drop' means that the
+            // sojourn time has been above target for interval so enter dropping state.
+        } else if (r.ok_to_drop) {
+            hdr_tcp* tcph = hdr_tcp::access(r.p);
+            hdr_ip* iph = hdr_ip::access(r.p);
+            //printf("%lf: %d: Dropping packet with seq %d. Entered dropping mode \n", Scheduler::instance().clock(), iph->flowid(), tcph->seqno());
             drop(r.p);
             r = dodeque(b->q_);
+            dropping_ = 1;
 
-	    //if drop emptied queue, it gets to be new on next arrival
-	    // and want to move on to next bin to find a packet to send
-	    if(r.p == NULL) {
-    		b->count_ = count_;
-    		b->drop_next_ = drop_next_;
-    		b->first_above_time_ = 0;
-		removebin(b);
-	    }
-
-            if (! r.ok_to_drop) {
-                // leave dropping state
-                dropping_ = 0;
-            } else {
-                // schedule the next drop.
-                ++count_;
-                drop_next_ = control_law(drop_next_);
-		//printf("%lf: Count = %d; drop_next = %lf \n", Scheduler::instance().clock(), count_, drop_next_); 
+            //if drop emptied bin's queue, it gets to be new on next arrival
+            // and want to move on to next bin to find a packet to send
+            if (r.p == NULL) {
+                b->count_ = count_;
+                b->drop_next_ = drop_next_;
+                b->first_above_time_ = 0;
+                removebin(b);
             }
+
+            // If min went above target close to when it last went below,
+            // assume that the drop rate that controlled the queue on the
+            // last cycle is a good starting point to control it now.
+            count_ = (count_ > 2 && now - drop_next_ < 8 * interval_) ? count_ - 2 : 1;
+            drop_next_ = control_law(now);
+            //printf("%lf: Count = %d; drop_next = %lf \n", Scheduler::instance().clock(), count_, drop_next_);
         }
-
-    // If we get here we’re not in dropping state. 'ok_to_drop' means that the
-    // sojourn time has been above target for interval so enter dropping state.
-    } else if (r.ok_to_drop) {
-	hdr_tcp *tcph = hdr_tcp::access(r.p);
-	hdr_ip *iph = hdr_ip::access(r.p);
-	//printf("%lf: %d: Dropping packet with seq %d. Entered dropping mode \n", Scheduler::instance().clock(), iph->flowid(), tcph->seqno()); 
-        drop(r.p);
-        r = dodeque(b->q_);
-        dropping_ = 1;
-
-	//if drop emptied bin's queue, it gets to be new on next arrival
-	// and want to move on to next bin to find a packet to send
-	if(r.p == NULL) {
-    		b->count_ = count_;
-    		b->drop_next_ = drop_next_;
-    		b->first_above_time_ = 0;
-		removebin(b);
-	}
-
-        // If min went above target close to when it last went below,
-        // assume that the drop rate that controlled the queue on the
-        // last cycle is a good starting point to control it now.
-        count_ = (count_ > 2 && now - drop_next_ < 8*interval_)? count_ - 2 : 1;
-        drop_next_ = control_law(now);
-	//printf("%lf: Count = %d; drop_next = %lf \n", Scheduler::instance().clock(), count_, drop_next_); 
-    }
-   } while (r.p == NULL) ;
+    } while (r.p == NULL);
 
     //make sure the bin state gets updated
-    if(r.p != NULL) {
-	b->count_ = count_;
-    	b->first_above_time_ = first_above_time_;
-    	b->drop_next_ = drop_next_;
-    	b->dropping_ = dropping_;
+    if (r.p != NULL) {
+        b->count_ = count_;
+        b->first_above_time_ = first_above_time_;
+        b->drop_next_ = drop_next_;
+        b->dropping_ = dropping_;
     }
 
-    if(quantum_) { //for rounding on bytes, don't advance binsched_
-       b->deficit_ -= HDR_CMN(r.p)->size();
+    if (quantum_) { //for rounding on bytes, don't advance binsched_
+        b->deficit_ -= HDR_CMN(r.p)->size();
     } else
 
-    // There's a packet to send so need to advance bin schedule.
-    // so that binsched_ will be next one to send (or NULL)
-     if(binsched_ != NULL) binsched_ = binsched_->next;
+        // There's a packet to send so need to advance bin schedule.
+        // so that binsched_ will be next one to send (or NULL)
+        if (binsched_ != NULL)
+        binsched_ = binsched_->next;
 
     return (r.p);
 }
 
-int sfqCoDelQueue::command(int argc, const char*const* argv)
+int sfqCoDelQueue::command(int argc, const char* const* argv)
 {
     Tcl& tcl = Tcl::instance();
 
@@ -560,7 +584,7 @@ int sfqCoDelQueue::command(int argc, const char*const* argv)
             reset();
             return (TCL_OK);
         } else if (strcmp(argv[1], "isolate-cbr") == 0) {
-	    isolate_ = 1;
+            isolate_ = 1;
             return (TCL_OK);
         }
     } else if (argc == 3) {
@@ -577,14 +601,14 @@ int sfqCoDelQueue::command(int argc, const char*const* argv)
         }
         // connect CoDel to the underlying queue
         if (!strcmp(argv[1], "packetqueue-attach")) {
-//            delete q_;
-//            if (!(q_ = (PacketQueue*) TclObject::lookup(argv[2])))
-printf("error in command\n");
-                return (TCL_ERROR);
-//            else {
-//                pq_ = q_;
-//                return (TCL_OK);
-//            }
+            //            delete q_;
+            //            if (!(q_ = (PacketQueue*) TclObject::lookup(argv[2])))
+            printf("error in command\n");
+            return (TCL_ERROR);
+            //            else {
+            //                pq_ = q_;
+            //                return (TCL_OK);
+            //            }
         }
     }
     return (Queue::command(argc, argv));
@@ -592,28 +616,26 @@ printf("error in command\n");
 
 // Routine called by TracedVar facility when variables change values.
 // Note that the tracing of each var must be enabled in tcl to work.
-void
-sfqCoDelQueue::trace(TracedVar* v)
+void sfqCoDelQueue::trace(TracedVar* v)
 {
-    const char *p;
+    const char* p;
 
-    if (((p = strstr(v->name(), "curq")) == NULL) &&
-        ((p = strstr(v->name(), "d_exp")) == NULL) ) {
+    if (((p = strstr(v->name(), "curq")) == NULL) && ((p = strstr(v->name(), "d_exp")) == NULL)) {
         fprintf(stderr, "sfqCoDel: unknown trace var %s\n", v->name());
         return;
     }
     if (tchan_) {
         char wrk[500];
         double t = Scheduler::instance().clock();
-        if(*p == 'c') {
-            sprintf(wrk, "c %g %d", t, int(*((TracedInt*) v)));
-        } else if(*p == 'd') {
-            sprintf(wrk, "d %g %g %d %g", t, double(*((TracedDouble*) v)), count_,
-                    count_? control_law(0.)*1000.:0.);
+        if (*p == 'c') {
+            sprintf(wrk, "c %g %d", t, int(*((TracedInt*)v)));
+        } else if (*p == 'd') {
+            sprintf(wrk, "d %g %g %d %g", t, double(*((TracedDouble*)v)), count_,
+                count_ ? control_law(0.) * 1000. : 0.);
         }
         int n = strlen(wrk);
-        wrk[n] = '\n'; 
-        wrk[n+1] = 0;
-        (void)Tcl_Write(tchan_, wrk, n+1);
+        wrk[n] = '\n';
+        wrk[n + 1] = 0;
+        (void)Tcl_Write(tchan_, wrk, n + 1);
     }
 }

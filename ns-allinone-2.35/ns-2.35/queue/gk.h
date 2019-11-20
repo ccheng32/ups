@@ -33,43 +33,44 @@
  * SUCH DAMAGE.
  *
  */
- 
+
 #ifndef ns_gk_h
 #define ns_gk_h
- 
+
 #include <string.h>
 #include "queue.h"
 
-class LinkDelay; 
+class LinkDelay;
 
 class GK : public Queue {
- public:
-	GK(const char *);
- protected:
-  int command(int argc, const char*const* argv);
-  void enque(Packet*);
-  Packet* deque();
-  void deque_vq();    /* Deques from the virtual queue_ */
-	LinkDelay* link_; /* outgoing link */
-  PacketQueue *q_;    /* underlying FIFO queue */
-  int drop_front_;    /* drop-from-front (rather than from tail) */
-  double ecnlim_;     /* Factor by which capacity and buffer is acled down*/
-  double vq_len;      /* Virtual Queue length */
-  double c_;          /* Capacity of the link */
-  int mark_flag;      /* Indicates that all outgoing packets shd be marked */
-  double prev_time;
-  double curr_time;
-	int mean_pktsize_;
-	TracedInt curq_;	/* current qlen seen by arrivals */
+public:
+    GK(const char*);
 
-	// added to be able to trace EDrop Objects
-	// the other events - forced drop, enque and deque are traced by a 
-	// different mechanism.
-	NsObject * EDTrace;    //early drop trace
-	char traceType[20];    /* the preferred type for early drop trace. 
+protected:
+    int command(int argc, const char* const* argv);
+    void enque(Packet*);
+    Packet* deque();
+    void deque_vq(); /* Deques from the virtual queue_ */
+    LinkDelay* link_; /* outgoing link */
+    PacketQueue* q_; /* underlying FIFO queue */
+    int drop_front_; /* drop-from-front (rather than from tail) */
+    double ecnlim_; /* Factor by which capacity and buffer is acled down*/
+    double vq_len; /* Virtual Queue length */
+    double c_; /* Capacity of the link */
+    int mark_flag; /* Indicates that all outgoing packets shd be marked */
+    double prev_time;
+    double curr_time;
+    int mean_pktsize_;
+    TracedInt curq_; /* current qlen seen by arrivals */
+
+    // added to be able to trace EDrop Objects
+    // the other events - forced drop, enque and deque are traced by a
+    // different mechanism.
+    NsObject* EDTrace; //early drop trace
+    char traceType[20]; /* the preferred type for early drop trace. 
 														better be less than 19 chars long */
-	Tcl_Channel tchan_;	/* place to write trace records */
-	void trace(TracedVar*);	/* routine to write trace records */
+    Tcl_Channel tchan_; /* place to write trace records */
+    void trace(TracedVar*); /* routine to write trace records */
 };
 
 #endif

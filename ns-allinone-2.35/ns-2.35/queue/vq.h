@@ -40,7 +40,7 @@
                          - Srisankar
 												   01/07/2001.
 */
- 
+
 #ifndef ns_vq_h
 #define ns_vq_h
 
@@ -50,52 +50,53 @@
 
 class Vq;
 
-class LinkDelay; 
+class LinkDelay;
 
 class Vq : public Queue {
 public:
-  Vq(const char *); 
+    Vq(const char*);
+
 protected:
-  int command(int argc, const char*const* argv);
-  void enque(Packet*);
-  Packet* deque();
-	int checkPacketForECN();
-	void markPacketForECN(Packet* pkt);
-	void dropPacketForECN(Packet* pkt); 
+    int command(int argc, const char* const* argv);
+    void enque(Packet*);
+    Packet* deque();
+    int checkPacketForECN();
+    void markPacketForECN(Packet* pkt);
+    void dropPacketForECN(Packet* pkt);
 
-	LinkDelay* link_;	/* outgoing link */
-	PacketQueue *q_;    /* underlying FIFO queue */
-  int drop_front_;    /* drop-from-front (rather than from tail) */
-  double ecnlim_;     /* Limit when ecn marking comes into effect*/
-	double buflim_;
-  double vq_len;
-  double c_;
-	double prev_time;
-	double vqprev_time;
-  double curr_time;
-	double alpha2;
-	double gamma_;
-	int qib_;	/* bool: queue measured in bytes? */
-	double ctilde; // Virtual Capacity
-	int markpkts_; // Whether to mark or drop packets
-	int markfront_; // Mark Front?
-	int firstpkt;
-	int Pktdrp;
-	int pkt_cnt;
-	long int qlength;
-	int mean_pktsize_;
+    LinkDelay* link_; /* outgoing link */
+    PacketQueue* q_; /* underlying FIFO queue */
+    int drop_front_; /* drop-from-front (rather than from tail) */
+    double ecnlim_; /* Limit when ecn marking comes into effect*/
+    double buflim_;
+    double vq_len;
+    double c_;
+    double prev_time;
+    double vqprev_time;
+    double curr_time;
+    double alpha2;
+    double gamma_;
+    int qib_; /* bool: queue measured in bytes? */
+    double ctilde; // Virtual Capacity
+    int markpkts_; // Whether to mark or drop packets
+    int markfront_; // Mark Front?
+    int firstpkt;
+    int Pktdrp;
+    int pkt_cnt;
+    long int qlength;
+    int mean_pktsize_;
 
-	FILE *fp;
+    FILE* fp;
 
-	// added to be able to trace EDrop Objects
-	// the other events - forced drop, enque and deque are traced by a 
-	// different mechanism.
-	NsObject * EDTrace;    //early drop trace
-	char traceType[20];    /* the preferred type for early drop trace. 
+    // added to be able to trace EDrop Objects
+    // the other events - forced drop, enque and deque are traced by a
+    // different mechanism.
+    NsObject* EDTrace; //early drop trace
+    char traceType[20]; /* the preferred type for early drop trace. 
 														better be less than 19 chars long */
-	Tcl_Channel tchan_;	/* place to write trace records */
-	TracedInt curq_;	/* current qlen seen by arrivals */
-	void trace(TracedVar*);	/* routine to write trace records */
+    Tcl_Channel tchan_; /* place to write trace records */
+    TracedInt curq_; /* current qlen seen by arrivals */
+    void trace(TracedVar*); /* routine to write trace records */
 };
 
 #endif

@@ -91,8 +91,7 @@
 */
 
 #ifndef lint
-static const char rcsid[] =
-    "@(#) $Header: /cvsroot/nsnam/ns-2/queue/vq.cc,v 1.7 2010/03/08 05:54:53 tom_henderson Exp $ (LBL)";
+static const char rcsid[] = "@(#) $Header: /cvsroot/nsnam/ns-2/queue/vq.cc,v 1.7 2010/03/08 05:54:53 tom_henderson Exp $ (LBL)";
 #endif
 #include "flags.h"
 #include "delay.h"
@@ -101,222 +100,232 @@ static const char rcsid[] =
 
 static class VqClass : public TclClass {
 public:
-	VqClass() : TclClass("Queue/Vq") {}
-	TclObject* create(int argc, const char*const* argv) {
-		if (argc==5) 
-			return (new Vq(argv[4]));
-		else
-			return (new Vq("Drop"));
-	}
+    VqClass()
+        : TclClass("Queue/Vq")
+    {
+    }
+    TclObject* create(int argc, const char* const* argv)
+    {
+        if (argc == 5)
+            return (new Vq(argv[4]));
+        else
+            return (new Vq("Drop"));
+    }
 } class_vq;
 
-Vq::Vq(const char * ) : link_(NULL), EDTrace(NULL), tchan_(0){
-	q_ = new PacketQueue;
-	pq_ = q_;
-	bind_bool("drop_front_", &drop_front_);
-	bind("ecnlim_", &ecnlim_); //  = ctilde/c ; Initial value set to 0.8
-	bind("buflim_", &buflim_); /* Fraction of the original buffer that the VQ buffer has. Default is 1.0 */
-	bind_bool("queue_in_bytes_", &qib_);	 // boolean: q in bytes?
-	bind("gamma_", &gamma_); // Defines the utilization. Default is 0.98
-	bind_bool("markpkts_", &markpkts_); /* Whether to mark or drop?  Default is drop */
-	bind_bool("markfront_", &markfront_); /* Mark from front?  Deafult is false */
-	bind("mean_pktsize_", &mean_pktsize_);  // avg pkt size
-	bind("curq_", &curq_);          // current queue size
-	
-	vq_len = 0.0;
-	prev_time = 0.0;
-	vqprev_time = 0.0;
-	alpha2 = 0.15; // Determines how fast we adapt at the link
-	Pktdrp = 0; /* Useful if we are dropping pkts instead of marking */
-	firstpkt = 1;
-	qlength = 0; /* Tracks the queue length */
+Vq::Vq(const char*)
+    : link_(NULL)
+    , EDTrace(NULL)
+    , tchan_(0)
+{
+    q_ = new PacketQueue;
+    pq_ = q_;
+    bind_bool("drop_front_", &drop_front_);
+    bind("ecnlim_", &ecnlim_); //  = ctilde/c ; Initial value set to 0.8
+    bind("buflim_", &buflim_); /* Fraction of the original buffer that the VQ buffer has. Default is 1.0 */
+    bind_bool("queue_in_bytes_", &qib_); // boolean: q in bytes?
+    bind("gamma_", &gamma_); // Defines the utilization. Default is 0.98
+    bind_bool("markpkts_", &markpkts_); /* Whether to mark or drop?  Default is drop */
+    bind_bool("markfront_", &markfront_); /* Mark from front?  Deafult is false */
+    bind("mean_pktsize_", &mean_pktsize_); // avg pkt size
+    bind("curq_", &curq_); // current queue size
+
+    vq_len = 0.0;
+    prev_time = 0.0;
+    vqprev_time = 0.0;
+    alpha2 = 0.15; // Determines how fast we adapt at the link
+    Pktdrp = 0; /* Useful if we are dropping pkts instead of marking */
+    firstpkt = 1;
+    qlength = 0; /* Tracks the queue length */
 }
 
-int Vq::command(int argc, const char*const* argv) {
-	Tcl& tcl = Tcl::instance();
-  if (argc == 3) {
-	  if (strcmp(argv[1], "link") == 0) {
-		  LinkDelay* del = (LinkDelay*)TclObject::lookup(argv[2]);
-		  if (del == 0) {
-			  return(TCL_ERROR);
-		  }
-		  // set capacity now
-			link_ = del;
-		  c_ = del->bandwidth();
-		  return (TCL_OK);
-	  }
-	  if (!strcmp(argv[1], "packetqueue-attach")) {
-		  delete q_;
-		  if (!(q_ = (PacketQueue*) TclObject::lookup(argv[2])))
-			  return (TCL_ERROR);
-		  else {
-			  pq_ = q_;
-			  return (TCL_OK);
-		  }
-	  }
-		// attach a file for variable tracing
-		if (strcmp(argv[1], "attach") == 0) {
-			int mode;
-			const char* id = argv[2];
-			tchan_ = Tcl_GetChannel(tcl.interp(), (char*)id, &mode);
-			if (tchan_ == 0) {
-				tcl.resultf("Vq: trace: can't attach %s for writing", id);
-				return (TCL_ERROR);
-			}
-			return (TCL_OK);
-		}
-  }
-  return Queue::command(argc, argv);
+int Vq::command(int argc, const char* const* argv)
+{
+    Tcl& tcl = Tcl::instance();
+    if (argc == 3) {
+        if (strcmp(argv[1], "link") == 0) {
+            LinkDelay* del = (LinkDelay*)TclObject::lookup(argv[2]);
+            if (del == 0) {
+                return (TCL_ERROR);
+            }
+            // set capacity now
+            link_ = del;
+            c_ = del->bandwidth();
+            return (TCL_OK);
+        }
+        if (!strcmp(argv[1], "packetqueue-attach")) {
+            delete q_;
+            if (!(q_ = (PacketQueue*)TclObject::lookup(argv[2])))
+                return (TCL_ERROR);
+            else {
+                pq_ = q_;
+                return (TCL_OK);
+            }
+        }
+        // attach a file for variable tracing
+        if (strcmp(argv[1], "attach") == 0) {
+            int mode;
+            const char* id = argv[2];
+            tchan_ = Tcl_GetChannel(tcl.interp(), (char*)id, &mode);
+            if (tchan_ == 0) {
+                tcl.resultf("Vq: trace: can't attach %s for writing", id);
+                return (TCL_ERROR);
+            }
+            return (TCL_OK);
+        }
+    }
+    return Queue::command(argc, argv);
 }
 
 void Vq::enque(Packet* p)
 {
-	q_->enque(p);
-	hdr_cmn* ch = hdr_cmn::access(p);
-	qlength = qlength + (qib_ * ch->size()) + (1 - qib_);
-	
-	if(firstpkt){
-		/* Changing c_ so that it is measured in packets per second */
-		/* Assuming packets are fixed size with 1000 bytes */
-		
-		if(qib_) c_ = c_ / (8.0);
-		else c_ = c_ / (8.0 * mean_pktsize_);
-		firstpkt = 0;
-		ctilde = c_ * ecnlim_;
-		prev_time = Scheduler::instance().clock();
-		vqprev_time = Scheduler::instance().clock();
-	}
+    q_->enque(p);
+    hdr_cmn* ch = hdr_cmn::access(p);
+    qlength = qlength + (qib_ * ch->size()) + (1 - qib_);
 
-	/* Update the Virtual Queue length */ 	
-	curr_time = Scheduler::instance().clock();
-	vq_len = vq_len - (ctilde * (curr_time - vqprev_time));
-	vqprev_time = curr_time;
-	if(vq_len < 0.0) vq_len = 0.0;
-	vq_len = vq_len + qib_ * ch->size() + (1 - qib_);
-	
-	/* checkPacketForECN() returns 1 if we need to mark or drop a packet*/
-	
-	if(checkPacketForECN()){
-		if(markpkts_)
-			markPacketForECN(p);
-		else
-			dropPacketForECN(p);
-	}
-	
-	/* Adaptation of the virtual capacity, tilde(C) */
-	/* Use the token bucket system  */
-	/* Scale alpha appropriately if qib_ is set */
-	
-	if(Pktdrp == 0){ // Do the adaptation
-		/* Pktdrp = 0 always when marking */
-		ctilde = ctilde + alpha2*gamma_*c_*(curr_time - prev_time) - alpha2*(1.0 - qib_) - alpha2*qib_*ch->size();
-		if(ctilde > c_) ctilde = c_;
-		if(ctilde <0.0) ctilde = 0.0;
-		prev_time = curr_time;
-	}
-	else{ // No adaptation and reset Pktdrp
-		Pktdrp = 0;
-	}
-	
-	if (qlength > qlim_*( 1 - qib_ + qib_*mean_pktsize_)) {
-		if (drop_front_) { /* remove from head of queue */
-			if(q_->length() > 0){
-				Packet *pp = q_->head();
-				qlength = qlength - qib_ * ch->size() - (1 - qib_);
-				q_->remove(pp); 
-				drop(pp);
-			}
-		} 
-		else {
-			q_->remove(p);
-			qlength = qlength - qib_ * ch->size() - (1 - qib_);
-			drop(p);
-		}
-	}
-	curq_ = qlength;
+    if (firstpkt) {
+        /* Changing c_ so that it is measured in packets per second */
+        /* Assuming packets are fixed size with 1000 bytes */
+
+        if (qib_)
+            c_ = c_ / (8.0);
+        else
+            c_ = c_ / (8.0 * mean_pktsize_);
+        firstpkt = 0;
+        ctilde = c_ * ecnlim_;
+        prev_time = Scheduler::instance().clock();
+        vqprev_time = Scheduler::instance().clock();
+    }
+
+    /* Update the Virtual Queue length */
+    curr_time = Scheduler::instance().clock();
+    vq_len = vq_len - (ctilde * (curr_time - vqprev_time));
+    vqprev_time = curr_time;
+    if (vq_len < 0.0)
+        vq_len = 0.0;
+    vq_len = vq_len + qib_ * ch->size() + (1 - qib_);
+
+    /* checkPacketForECN() returns 1 if we need to mark or drop a packet*/
+
+    if (checkPacketForECN()) {
+        if (markpkts_)
+            markPacketForECN(p);
+        else
+            dropPacketForECN(p);
+    }
+
+    /* Adaptation of the virtual capacity, tilde(C) */
+    /* Use the token bucket system  */
+    /* Scale alpha appropriately if qib_ is set */
+
+    if (Pktdrp == 0) { // Do the adaptation
+        /* Pktdrp = 0 always when marking */
+        ctilde = ctilde + alpha2 * gamma_ * c_ * (curr_time - prev_time) - alpha2 * (1.0 - qib_) - alpha2 * qib_ * ch->size();
+        if (ctilde > c_)
+            ctilde = c_;
+        if (ctilde < 0.0)
+            ctilde = 0.0;
+        prev_time = curr_time;
+    } else { // No adaptation and reset Pktdrp
+        Pktdrp = 0;
+    }
+
+    if (qlength > qlim_ * (1 - qib_ + qib_ * mean_pktsize_)) {
+        if (drop_front_) { /* remove from head of queue */
+            if (q_->length() > 0) {
+                Packet* pp = q_->head();
+                qlength = qlength - qib_ * ch->size() - (1 - qib_);
+                q_->remove(pp);
+                drop(pp);
+            }
+        } else {
+            q_->remove(p);
+            qlength = qlength - qib_ * ch->size() - (1 - qib_);
+            drop(p);
+        }
+    }
+    curq_ = qlength;
 }
 
 /* This is a simple DropTail on the VQ. However, one Can add 
    any AQM scheme on VQ here */
-int Vq::checkPacketForECN(){
-	if(vq_len > (buflim_ * qlim_ * ( 1 - qib_ + qib_*mean_pktsize_))){
-		return 1;
-	}
-	else{
-		return 0;
-	}
+int Vq::checkPacketForECN()
+{
+    if (vq_len > (buflim_ * qlim_ * (1 - qib_ + qib_ * mean_pktsize_))) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 /* Implements a simple mark-tail/mark-front here. If needed other
-   mechanism (like mark-random ) can also be implemented */ 
-void  Vq::markPacketForECN(Packet* pkt)
+   mechanism (like mark-random ) can also be implemented */
+void Vq::markPacketForECN(Packet* pkt)
 {
-	/* Update the VQ length */
-	hdr_cmn* ch = hdr_cmn::access(pkt);
-	vq_len = vq_len - qib_ * ch->size() - (1.0 - qib_);
-	if(vq_len < 0.0) vq_len = 0.0;
-	
-	if(markfront_){ 
-		Packet *pp = q_->head();
-		hdr_flags* hf = hdr_flags::access(pp);
-		if(hf->ect() == 1)  // ECN capable flow
-			hf->ce() = 1; // Mark the TCP Flow;
-	}
-	else{ 
-		/* Mark the current packet and forget about it */
-		hdr_flags* hdr = hdr_flags::access(pkt);
-		if(hdr->ect() == 1)  // ECN capable flow
-			hdr->ce() = 1; // For TCP Flows
-	}
-}	
+    /* Update the VQ length */
+    hdr_cmn* ch = hdr_cmn::access(pkt);
+    vq_len = vq_len - qib_ * ch->size() - (1.0 - qib_);
+    if (vq_len < 0.0)
+        vq_len = 0.0;
+
+    if (markfront_) {
+        Packet* pp = q_->head();
+        hdr_flags* hf = hdr_flags::access(pp);
+        if (hf->ect() == 1) // ECN capable flow
+            hf->ce() = 1; // Mark the TCP Flow;
+    } else {
+        /* Mark the current packet and forget about it */
+        hdr_flags* hdr = hdr_flags::access(pkt);
+        if (hdr->ect() == 1) // ECN capable flow
+            hdr->ce() = 1; // For TCP Flows
+    }
+}
 
 /* Implements a simple drop-tail/drop-front here. If needed other
-   mechanism (like drop-random ) can also be implemented */ 
-void Vq::dropPacketForECN(Packet* pkt) 
+   mechanism (like drop-random ) can also be implemented */
+void Vq::dropPacketForECN(Packet* pkt)
 {
-	/* Update the VQ length */
-	hdr_cmn* ch = hdr_cmn::access(pkt);
-	vq_len = vq_len - qib_ * ch->size() - (1.0 - qib_);
-	if(vq_len < 0.0) vq_len = 0.0;
+    /* Update the VQ length */
+    hdr_cmn* ch = hdr_cmn::access(pkt);
+    vq_len = vq_len - qib_ * ch->size() - (1.0 - qib_);
+    if (vq_len < 0.0)
+        vq_len = 0.0;
 
-	if(drop_front_){
-		/* If drop from front is enabled, then deque a 
+    if (drop_front_) {
+        /* If drop from front is enabled, then deque a 
 		   packet from the front of the queue and drop it ...
-		   Usually not recommended */ 
-		if(q_->length() > 0 ){
-			Packet *pp = q_->head();
-			qlength = qlength - qib_ * ch->size() - (1 - qib_);
-			q_->remove(pp); /* The queue length is taken care of in
+		   Usually not recommended */
+        if (q_->length() > 0) {
+            Packet* pp = q_->head();
+            qlength = qlength - qib_ * ch->size() - (1 - qib_);
+            q_->remove(pp); /* The queue length is taken care of in
 										 in the deque program */
-			drop(pp);
+            drop(pp);
+        }
+    } else {
+        q_->remove(pkt);
+        qlength = qlength - qib_ * ch->size() - (1 - qib_);
+        drop(pkt);
+    }
 
-		}
-	}
-	else{
-		q_->remove(pkt);
-		qlength = qlength - qib_ * ch->size() - (1 - qib_);
-		drop(pkt);
-	}
-	
-	/* If one is dropping packets, one needs to be careful about 
+    /* If one is dropping packets, one needs to be careful about 
 	   measuring the total arrival rate to calculate the virtual
 	   capacity, tilde(C). In this case, the arrival rate that is
 	   taken into the adaptation algorithm is the accepted rate and
 	   not the offered rate. */
-	Pktdrp = 1; // Do not update tilde(C)
-	
-}	
+    Pktdrp = 1; // Do not update tilde(C)
+}
 
 Packet* Vq::deque()
 {
-	if((q_->length() > 0)){
-		Packet *ppp = q_->deque();
-		hdr_cmn* ch = hdr_cmn::access(ppp);
-		qlength = qlength - qib_ * ch->size() - (1 - qib_);
-		curq_ = qlength;
-		return ppp;
-	}
-	else return q_->deque();
+    if ((q_->length() > 0)) {
+        Packet* ppp = q_->deque();
+        hdr_cmn* ch = hdr_cmn::access(ppp);
+        qlength = qlength - qib_ * ch->size() - (1 - qib_);
+        curq_ = qlength;
+        return ppp;
+    } else
+        return q_->deque();
 }
 
 /*
@@ -328,35 +337,27 @@ Packet* Vq::deque()
 
 void Vq::trace(TracedVar* v)
 {
-	char wrk[500];
-	const char *p;
+    char wrk[500];
+    const char* p;
 
-	if ((p = strstr(v->name(), "curq")) == NULL) {
-		fprintf(stderr, "Vq:unknown trace var %s\n", v->name());
-		return;
-	}
+    if ((p = strstr(v->name(), "curq")) == NULL) {
+        fprintf(stderr, "Vq:unknown trace var %s\n", v->name());
+        return;
+    }
 
-	if (tchan_) {
-		int n;
-		double t = Scheduler::instance().clock();
-		// XXX: be compatible with nsv1 RED trace entries
-		if (*p == 'c') {
-			sprintf(wrk, "Q %g %d", t, int(*((TracedInt*) v)));
-		} else {
-			sprintf(wrk, "%c %g %g", *p, t, double(*((TracedDouble*) v)));
-		}
-		n = strlen(wrk);
-		wrk[n] = '\n'; 
-		wrk[n+1] = 0;
-		(void)Tcl_Write(tchan_, wrk, n+1);
-	}
-	return; 
+    if (tchan_) {
+        int n;
+        double t = Scheduler::instance().clock();
+        // XXX: be compatible with nsv1 RED trace entries
+        if (*p == 'c') {
+            sprintf(wrk, "Q %g %d", t, int(*((TracedInt*)v)));
+        } else {
+            sprintf(wrk, "%c %g %g", *p, t, double(*((TracedDouble*)v)));
+        }
+        n = strlen(wrk);
+        wrk[n] = '\n';
+        wrk[n + 1] = 0;
+        (void)Tcl_Write(tchan_, wrk, n + 1);
+    }
+    return;
 }
-
-
-
-
-
-
-
-

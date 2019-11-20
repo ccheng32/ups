@@ -57,8 +57,7 @@
    mark_flag: Indicates that the VQ overflowed and that all outgoing
               packets has to be marked.
 
-*/ 
-
+*/
 
 #include "flags.h"
 #include "delay.h"
@@ -67,130 +66,139 @@
 
 static class GKClass : public TclClass {
 public:
-  	GKClass() : TclClass("Queue/GK") {}
-	TclObject* create(int argc, const char*const* argv) {
-		if (argc==5)
-			return (new GK(argv[4]));
-		else
-			return (new GK("Drop"));
-	}	
+    GKClass()
+        : TclClass("Queue/GK")
+    {
+    }
+    TclObject* create(int argc, const char* const* argv)
+    {
+        if (argc == 5)
+            return (new GK(argv[4]));
+        else
+            return (new GK("Drop"));
+    }
 } class_gk;
 
-GK::GK(const char * ):link_(NULL), EDTrace(NULL), tchan_(0)
+GK::GK(const char*)
+    : link_(NULL)
+    , EDTrace(NULL)
+    , tchan_(0)
 {
-	q_ = new PacketQueue;
-	pq_ = q_;
-	bind_bool("drop_front_", &drop_front_);
-	bind("ecnlim_", &ecnlim_); 
-	bind("mean_pktsize_", &mean_pktsize_); 
-	bind("curq_", &curq_); 
-	vq_len = 0.0;
-	prev_time = 0.0;
-	mark_flag = 0;
+    q_ = new PacketQueue;
+    pq_ = q_;
+    bind_bool("drop_front_", &drop_front_);
+    bind("ecnlim_", &ecnlim_);
+    bind("mean_pktsize_", &mean_pktsize_);
+    bind("curq_", &curq_);
+    vq_len = 0.0;
+    prev_time = 0.0;
+    mark_flag = 0;
 }
 
-int GK::command(int argc, const char*const* argv) {
-	Tcl& tcl = Tcl::instance();
-  if (argc == 3) {
-	  if (strcmp(argv[1], "link") == 0) {
-		  LinkDelay* del = (LinkDelay*)TclObject::lookup(argv[2]);
-		  if (del == 0) {
-			  return(TCL_ERROR);
-		  }
-		  // set capacity now
-			link_ = del;
-		  c_ = del->bandwidth();
-			c_ = c_ / (8.0 * mean_pktsize_);
-		  return (TCL_OK);
-	  }
-	  if (!strcmp(argv[1], "packetqueue-attach")) {
-		  delete q_;
-		  if (!(q_ = (PacketQueue*) TclObject::lookup(argv[2])))
-			  return (TCL_ERROR);
-		  else {
-			  pq_ = q_;
-			  return (TCL_OK);
-		  }
-	  }
-		// attach a file for variable tracing
-		if (strcmp(argv[1], "attach") == 0) {
-			int mode;
-			const char* id = argv[2];
-			tchan_ = Tcl_GetChannel(tcl.interp(), (char*)id, &mode);
-			if (tchan_ == 0) {
-				tcl.resultf("Vq: trace: can't attach %s for writing", id);
-				return (TCL_ERROR);
-			}
-			return (TCL_OK);
-		}
-  }
-  return Queue::command(argc, argv);
+int GK::command(int argc, const char* const* argv)
+{
+    Tcl& tcl = Tcl::instance();
+    if (argc == 3) {
+        if (strcmp(argv[1], "link") == 0) {
+            LinkDelay* del = (LinkDelay*)TclObject::lookup(argv[2]);
+            if (del == 0) {
+                return (TCL_ERROR);
+            }
+            // set capacity now
+            link_ = del;
+            c_ = del->bandwidth();
+            c_ = c_ / (8.0 * mean_pktsize_);
+            return (TCL_OK);
+        }
+        if (!strcmp(argv[1], "packetqueue-attach")) {
+            delete q_;
+            if (!(q_ = (PacketQueue*)TclObject::lookup(argv[2])))
+                return (TCL_ERROR);
+            else {
+                pq_ = q_;
+                return (TCL_OK);
+            }
+        }
+        // attach a file for variable tracing
+        if (strcmp(argv[1], "attach") == 0) {
+            int mode;
+            const char* id = argv[2];
+            tchan_ = Tcl_GetChannel(tcl.interp(), (char*)id, &mode);
+            if (tchan_ == 0) {
+                tcl.resultf("Vq: trace: can't attach %s for writing", id);
+                return (TCL_ERROR);
+            }
+            return (TCL_OK);
+        }
+    }
+    return Queue::command(argc, argv);
 }
 
 void GK::enque(Packet* p)
 {
-  q_->enque(p);
- 	 
-  curr_time = Scheduler::instance().clock();
-  /*Whenever a packet is enqueued, the actual length of the
-    virtual queue is determined */
- 
-  if(curr_time > prev_time){
-	  deque_vq();
-  }
-  /* Add the packet to the VQ */
-  vq_len = vq_len + 1.0;
+    q_->enque(p);
 
-  /* If the VQ overflows, set flag so that all packets may be marked
+    curr_time = Scheduler::instance().clock();
+    /*Whenever a packet is enqueued, the actual length of the
+    virtual queue is determined */
+
+    if (curr_time > prev_time) {
+        deque_vq();
+    }
+    /* Add the packet to the VQ */
+    vq_len = vq_len + 1.0;
+
+    /* If the VQ overflows, set flag so that all packets may be marked
 	 till the VQ hits zero again. */
-  if(vq_len > (ecnlim_ * qlim_)){
-	  mark_flag = 1; // Indicates that all outgoing packets has to be marked
-	  vq_len = vq_len - 1.0;
-  }
-  
-  if (q_->length() >= qlim_) {
-		if (drop_front_) { /* remove from head of queue */
-	  	Packet *pp = q_->deque();
-	  	drop(pp);
-		} else {
-	  	q_->remove(p);
-	  	drop(p);
-		}
-  }
- 	curq_ = q_->length(); 
+    if (vq_len > (ecnlim_ * qlim_)) {
+        mark_flag = 1; // Indicates that all outgoing packets has to be marked
+        vq_len = vq_len - 1.0;
+    }
+
+    if (q_->length() >= qlim_) {
+        if (drop_front_) { /* remove from head of queue */
+            Packet* pp = q_->deque();
+            drop(pp);
+        } else {
+            q_->remove(p);
+            drop(p);
+        }
+    }
+    curq_ = q_->length();
 }
 
 Packet* GK::deque()
 {
-  /* Check the status of the virtual queue. We do this to update the
+    /* Check the status of the virtual queue. We do this to update the
 	 mark_flag.  */
-  curr_time = Scheduler::instance().clock();
-  deque_vq();
+    curr_time = Scheduler::instance().clock();
+    deque_vq();
 
-  /* If the Real queue has packets and the mark_flag is set, mark the
+    /* If the Real queue has packets and the mark_flag is set, mark the
 	 outgoing packet. */
-  if((q_->length() > 0) && (mark_flag == 1)){
-	Packet *pp = q_->deque();
-	hdr_flags* hf = hdr_flags::access(pp);
-	if(hf->ect() == 1)  // ECN capable flow
-		hf->ce() = 1; // Mark the TCP Flow;
-	return pp;
-  }
-  else return q_->deque();
+    if ((q_->length() > 0) && (mark_flag == 1)) {
+        Packet* pp = q_->deque();
+        hdr_flags* hf = hdr_flags::access(pp);
+        if (hf->ect() == 1) // ECN capable flow
+            hf->ce() = 1; // Mark the TCP Flow;
+        return pp;
+    } else
+        return q_->deque();
 }
 
 /* This procedure updates the VQ */
-void GK::deque_vq(){
-  if(vq_len > 0.0){ 
-	vq_len = vq_len - (ecnlim_ * c_ * (curr_time - prev_time));
-	prev_time = curr_time;
-	
-	/* If the VQ hits zero, unset mark_flag */
-	if(vq_len <= 0.0){
-	  vq_len = 0.0;
-	  mark_flag = 0;
-	}
-  }
+void GK::deque_vq()
+{
+    if (vq_len > 0.0) {
+        vq_len = vq_len - (ecnlim_ * c_ * (curr_time - prev_time));
+        prev_time = curr_time;
+
+        /* If the VQ hits zero, unset mark_flag */
+        if (vq_len <= 0.0) {
+            vq_len = 0.0;
+            mark_flag = 0;
+        }
+    }
 }
 
 /*
@@ -202,27 +210,27 @@ void GK::deque_vq(){
 
 void GK::trace(TracedVar* v)
 {
-	char wrk[500];
-	const char *p;
+    char wrk[500];
+    const char* p;
 
-	if ((p = strstr(v->name(), "curq")) == NULL) {
-		fprintf(stderr, "Vq:unknown trace var %s\n", v->name());
-		return;
-	}
+    if ((p = strstr(v->name(), "curq")) == NULL) {
+        fprintf(stderr, "Vq:unknown trace var %s\n", v->name());
+        return;
+    }
 
-	if (tchan_) {
-		int n;
-		double t = Scheduler::instance().clock();
-		// XXX: be compatible with nsv1 RED trace entries
-		if (*p == 'c') {
-			sprintf(wrk, "Q %g %d", t, int(*((TracedInt*) v)));
-		} else {
-			sprintf(wrk, "%c %g %g", *p, t, double(*((TracedDouble*) v)));
-		}
-		n = strlen(wrk);
-		wrk[n] = '\n'; 
-		wrk[n+1] = 0;
-		(void)Tcl_Write(tchan_, wrk, n+1);
-	}
-	return; 
+    if (tchan_) {
+        int n;
+        double t = Scheduler::instance().clock();
+        // XXX: be compatible with nsv1 RED trace entries
+        if (*p == 'c') {
+            sprintf(wrk, "Q %g %d", t, int(*((TracedInt*)v)));
+        } else {
+            sprintf(wrk, "%c %g %g", *p, t, double(*((TracedDouble*)v)));
+        }
+        n = strlen(wrk);
+        wrk[n] = '\n';
+        wrk[n + 1] = 0;
+        (void)Tcl_Write(tchan_, wrk, n + 1);
+    }
+    return;
 }

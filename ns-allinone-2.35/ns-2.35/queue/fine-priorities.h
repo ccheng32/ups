@@ -15,38 +15,37 @@
 #include "fstream"
 
 struct bindesc {
-        PacketQueue *q_;        // underlying FIFO queue
-	int index;
-} ;
+    PacketQueue* q_; // underlying FIFO queue
+    int index;
+};
 
 class finePrioritiesQueue : public Queue {
 
-  public:   
+public:
     finePrioritiesQueue();
 
-  protected:
+protected:
     void insertPacketinSortedQueue(Packet* pkt);
     void enque(Packet* pkt);
     int dropPacket(int pr);
     Packet* deque();
-   
+
     bindesc bin_[2];
 
-    int curlen_;	    // the total occupancy of all bins in packets
+    int curlen_; // the total occupancy of all bins in packets
     int debug_;
     int queueid_;
 
     // NS-specific junk
-    int command(int argc, const char*const* argv);
+    int command(int argc, const char* const* argv);
     void reset();
     void trace(TracedVar*); // routine to write trace records
-    
+
     long int kTime_;
     int control_packets_;
 
-    Tcl_Channel tchan_;     // place to write trace records
-    TracedInt curq_;        // current qlen in bytes seen by arrivals
-
+    Tcl_Channel tchan_; // place to write trace records
+    TracedInt curq_; // current qlen in bytes seen by arrivals
 };
 
 #endif

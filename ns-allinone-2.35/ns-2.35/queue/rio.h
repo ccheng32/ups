@@ -50,81 +50,92 @@
  * Early drop parameters, supplied by user, for a subqueue.
  */
 struct edp_rio {
-	/*
+    /*
 	 * User supplied.
 	 */
-	int gentle;	        /* when ave queue exceeds maxthresh. */
-	double th_min;	/* minimum threshold of average queue size */
-	double th_max;	/* maximum threshold of average queue size */
-	double max_p_inv;	/* 1/max_p, for max_p = maximum prob.  */
+    int gentle; /* when ave queue exceeds maxthresh. */
+    double th_min; /* minimum threshold of average queue size */
+    double th_max; /* maximum threshold of average queue size */
+    double max_p_inv; /* 1/max_p, for max_p = maximum prob.  */
 };
 
 /*
  * Early drop variables, maintained by RIO, for a subqueue.
  */
 struct edv_rio {
-        /* added by Wenjia modified by Yun: a new set In packets */
-        double v_ave;         /* average In queue size */
-	double v_prob1;	/* prob. of packet drop before "count". */
-        double v_slope;       /* used in computing average queue size */
-        double v_r;
-        double v_prob;        /* prob. of packet drop */
-        double v_a;           /* v_prob = v_a * v_ave + v_b */
-        double v_b;
-	double v_c;
-	double v_d;
-        int count;           /* # of packets since last drop */
-        int count_bytes;     /* # of bytes since last drop */
-        int old;             /* 0 when average queue first exceeds thresh */
-        struct dlist* drops;
+    /* added by Wenjia modified by Yun: a new set In packets */
+    double v_ave; /* average In queue size */
+    double v_prob1; /* prob. of packet drop before "count". */
+    double v_slope; /* used in computing average queue size */
+    double v_r;
+    double v_prob; /* prob. of packet drop */
+    double v_a; /* v_prob = v_a * v_ave + v_b */
+    double v_b;
+    double v_c;
+    double v_d;
+    int count; /* # of packets since last drop */
+    int count_bytes; /* # of bytes since last drop */
+    int old; /* 0 when average queue first exceeds thresh */
+    struct dlist* drops;
 
-	edv_rio() : v_ave(0.0), v_prob1(0.0), v_slope(0.0), v_prob(0.0),
-		v_a(0.0), v_b(0.0), count(0), count_bytes(0), old(0) { }
+    edv_rio()
+        : v_ave(0.0)
+        , v_prob1(0.0)
+        , v_slope(0.0)
+        , v_prob(0.0)
+        , v_a(0.0)
+        , v_b(0.0)
+        , count(0)
+        , count_bytes(0)
+        , old(0)
+    {
+    }
 };
 
 class REDQueue;
 
 class RIOQueue : public virtual REDQueue {
- public:	
-	RIOQueue();
- protected:
-	void enque(Packet* pkt);
-	Packet* deque();
-	void reset();
+public:
+    RIOQueue();
 
-	void run_out_estimator(int out, int total, int m);
+protected:
+    void enque(Packet* pkt);
+    Packet* deque();
+    void reset();
 
-	// int drop_early(Packet* pkt);
-	int drop_in_early(Packet* pkt);
-	int drop_out_early(Packet* pkt);
+    void run_out_estimator(int out, int total, int m);
 
-	/* added by Yun: In packets byte count */
-	int in_len_;	/* In Packets count */
-	int in_bcount_;	/* In packets byte count */
+    // int drop_early(Packet* pkt);
+    int drop_in_early(Packet* pkt);
+    int drop_out_early(Packet* pkt);
 
-	void trace(TracedVar*);	/* routine to write trace records */
+    /* added by Yun: In packets byte count */
+    int in_len_; /* In Packets count */
+    int in_bcount_; /* In packets byte count */
 
-	/*
+    void trace(TracedVar*); /* routine to write trace records */
+
+    /*
 	 * Static state.
 	 */
-	int priority_method_;	/* 0 to leave priority field in header, */
-				/*  1 to use flowid as priority.  */
+    int priority_method_; /* 0 to leave priority field in header, */
+    /*  1 to use flowid as priority.  */
 
-	edp_rio edp_in_; 	/* early-drop params for IN traffic */
-	edp_rio edp_out_;        /* early-drop params for OUT traffic */
+    edp_rio edp_in_; /* early-drop params for IN traffic */
+    edp_rio edp_out_; /* early-drop params for OUT traffic */
 
-	/*
+    /*
 	 * Dynamic state.
 	 */
-	/* added by Wenjia noticed by Yun: to trace the idle */
-	int in_idle_;
-	double in_idletime_;
+    /* added by Wenjia noticed by Yun: to trace the idle */
+    int in_idle_;
+    double in_idletime_;
 
-	edv_rio edv_in_;	/* early-drop variables for IN traffic */
-	edv_rio edv_out_;        /* early-drop variables for OUT traffic */ 
+    edv_rio edv_in_; /* early-drop variables for IN traffic */
+    edv_rio edv_out_; /* early-drop variables for OUT traffic */
 
-	void print_edp();	// for debugging
-	void print_edv();	// for debugging
+    void print_edp(); // for debugging
+    void print_edv(); // for debugging
 };
 
 #endif

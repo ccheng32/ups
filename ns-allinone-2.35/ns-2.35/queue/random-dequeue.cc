@@ -12,28 +12,34 @@
 //#include "docsislink.h"
 
 static class randomDequeueClass : public TclClass {
-  public:
-    randomDequeueClass() : TclClass("Queue/randomDequeue") {}
-    TclObject* create(int, const char*const*) {
+public:
+    randomDequeueClass()
+        : TclClass("Queue/randomDequeue")
+    {
+    }
+    TclObject* create(int, const char* const*)
+    {
         return (new randomDequeueQueue);
     }
 } class_randomDequeue;
 
-randomDequeueQueue::randomDequeueQueue() :  maxbins_(MAXBINS), tchan_(0)
+randomDequeueQueue::randomDequeueQueue()
+    : maxbins_(MAXBINS)
+    , tchan_(0)
 {
-   bind("curq_", &curq_);      // current queue size in bytes
-   bind("maxbins_", &maxbins_);    // tcl settable max number of bins
-   bind("debug_", &debug_);    // tcl settable max number of bins
-					// if zero, rounds by packets
-   
-   if (maxbins_ > MAXBINS)  {
+    bind("curq_", &curq_); // current queue size in bytes
+    bind("maxbins_", &maxbins_); // tcl settable max number of bins
+    bind("debug_", &debug_); // tcl settable max number of bins
+        // if zero, rounds by packets
+
+    if (maxbins_ > MAXBINS) {
         printf("randomDequeue: maxbins_ of %d exceeds upper bound of %d", maxbins_, MAXBINS);
-	exit(0);
+        exit(0);
     }
-  
-    for(int i=0; i<2; i++) {
-     bin_[i].q_ = new PacketQueue();
-     bin_[i].index = i;
+
+    for (int i = 0; i < 2; i++) {
+        bin_[i].q_ = new PacketQueue();
+        bin_[i].index = i;
     }
 
     pq_ = bin_[1].q_; //does ns need this?
@@ -49,69 +55,64 @@ void randomDequeueQueue::reset()
 
 // Add a new packet to the queue. If the entire buffer space is full, drop the packet
 
-
 void randomDequeueQueue::enque(Packet* pkt)
 {
-	// check for full buffer
-        hdr_ip *iph = hdr_ip::access(pkt);
+    // check for full buffer
+    hdr_ip* iph = hdr_ip::access(pkt);
 
-	if(curlen_ >= qlim_) {
-          drop(pkt);
-          return;
-        }
-	curlen_++;
-	curq_ += HDR_CMN(pkt)->size();
+    if (curlen_ >= qlim_) {
+        drop(pkt);
+        return;
+    }
+    curlen_++;
+    curq_ += HDR_CMN(pkt)->size();
 
-        //hack to ensure same route computation when ECMP is enabled
-        if (HDR_CMN(pkt)->size() >= 1460) {
-	  (bin_[1].q_)->enque(pkt);
-	  if(debug_)
-        	printf("randomDequeue: Enqueuing packet from flow with id %d, slack %d, seqno = %d, size = %d in queue with curlen = %d\n", iph->flowid(), iph->prio(), getSeqNo(pkt), HDR_CMN(pkt)->size(), curlen_); 
-       }
-       else {
-	  (bin_[0].q_)->enque(pkt);
-	  if(debug_)
-        	printf("randomDequeue: Enqueuing packet from flow with id %d, slack %d, seqno = %d, size = %d in queue with curlen = %d in control queue \n", iph->flowid(), iph->prio(), getSeqNo(pkt), HDR_CMN(pkt)->size(), curlen_); 
-       }
+    //hack to ensure same route computation when ECMP is enabled
+    if (HDR_CMN(pkt)->size() >= 1460) {
+        (bin_[1].q_)->enque(pkt);
+        if (debug_)
+            printf("randomDequeue: Enqueuing packet from flow with id %d, slack %d, seqno = %d, size = %d in queue with curlen = %d\n", iph->flowid(), iph->prio(), getSeqNo(pkt), HDR_CMN(pkt)->size(), curlen_);
+    } else {
+        (bin_[0].q_)->enque(pkt);
+        if (debug_)
+            printf("randomDequeue: Enqueuing packet from flow with id %d, slack %d, seqno = %d, size = %d in queue with curlen = %d in control queue \n", iph->flowid(), iph->prio(), getSeqNo(pkt), HDR_CMN(pkt)->size(), curlen_);
+    }
 }
 
 Packet* randomDequeueQueue::deque()
 {
 
-       if(curlen_ > 0) {
+    if (curlen_ > 0) {
 
-           if((bin_[0].q_)->length() > 0) {
-		    Packet *pkt;
-		    pkt = (bin_[0].q_)->deque();
-        	    hdr_ip *iph = hdr_ip::access(pkt);
-                    curlen_--;
-                    curq_ -= HDR_CMN(pkt)->size();
-		    if(debug_)
-        	  	printf("%lf: randomDequeue: Dequing packet from flow with , slack %lld, seqno = %d, size = %d from control queue\n", Scheduler::instance().clock(), iph->flowid(), iph->prio(), getSeqNo(pkt), HDR_CMN(pkt)->size()); 
-		    return pkt;
-          } 
+        if ((bin_[0].q_)->length() > 0) {
+            Packet* pkt;
+            pkt = (bin_[0].q_)->deque();
+            hdr_ip* iph = hdr_ip::access(pkt);
+            curlen_--;
+            curq_ -= HDR_CMN(pkt)->size();
+            if (debug_)
+                printf("%lf: randomDequeue: Dequing packet from flow with , slack %lld, seqno = %d, size = %d from control queue\n", Scheduler::instance().clock(), iph->flowid(), iph->prio(), getSeqNo(pkt), HDR_CMN(pkt)->size());
+            return pkt;
+        }
 
+        int pktNum = rand() % curlen_;
+        Packet* pkt = (bin_[1].q_)->lookup(pktNum);
+        (bin_[1].q_)->remove(pkt);
+        hdr_ip* iph = hdr_ip::access(pkt);
+        curlen_--;
+        curq_ -= HDR_CMN(pkt)->size();
 
+        if (debug_)
+            printf("randomDequeue: Dequing packet from flow with id %d, slack %d, seqno = %d, size = %d from queue with curlen = %d\n", iph->flowid(), iph->prio(), getSeqNo(pkt), HDR_CMN(pkt)->size(), curlen_);
+        return pkt;
+    }
 
-          int pktNum = rand() % curlen_;
-	  Packet *pkt = (bin_[1].q_)->lookup(pktNum);
-	  (bin_[1].q_)->remove(pkt);
-          hdr_ip *iph = hdr_ip::access(pkt);
-          curlen_--;
-          curq_ -= HDR_CMN(pkt)->size();
-
-	  if(debug_)
-            printf("randomDequeue: Dequing packet from flow with id %d, slack %d, seqno = %d, size = %d from queue with curlen = %d\n", iph->flowid(), iph->prio(), getSeqNo(pkt), HDR_CMN(pkt)->size(), curlen_); 
-	  return pkt;
-       }
-       
-
-       if(debug_)
-       		printf("randomDequeue: Nothing to dequeue\n");
-       return 0;
+    if (debug_)
+        printf("randomDequeue: Nothing to dequeue\n");
+    return 0;
 }
 
-int randomDequeueQueue::command(int argc, const char*const* argv)
+int randomDequeueQueue::command(int argc, const char* const* argv)
 {
     Tcl& tcl = Tcl::instance();
 
@@ -119,7 +120,7 @@ int randomDequeueQueue::command(int argc, const char*const* argv)
         if (strcmp(argv[1], "reset") == 0) {
             reset();
             return (TCL_OK);
-        } 
+        }
     } else if (argc == 3) {
         // attach a file for variable tracing
         if (strcmp(argv[1], "attach") == 0) {
@@ -134,14 +135,14 @@ int randomDequeueQueue::command(int argc, const char*const* argv)
         }
         // connect slack queue to the underlying queue
         if (!strcmp(argv[1], "packetqueue-attach")) {
-//            delete q_;
-//            if (!(q_ = (PacketQueue*) TclObject::lookup(argv[2])))
-		printf("error in command\n");
-                return (TCL_ERROR);
-//            else {
-//                pq_ = q_;
-//                return (TCL_OK);
-//            }
+            //            delete q_;
+            //            if (!(q_ = (PacketQueue*) TclObject::lookup(argv[2])))
+            printf("error in command\n");
+            return (TCL_ERROR);
+            //            else {
+            //                pq_ = q_;
+            //                return (TCL_OK);
+            //            }
         }
     }
     return (Queue::command(argc, argv));
@@ -149,10 +150,9 @@ int randomDequeueQueue::command(int argc, const char*const* argv)
 
 // Routine called by TracedVar facility when variables change values.
 // Note that the tracing of each var must be enabled in tcl to work.
-void
-randomDequeueQueue::trace(TracedVar* v)
+void randomDequeueQueue::trace(TracedVar* v)
 {
-    const char *p;
+    const char* p;
 
     if ((p = strstr(v->name(), "curq")) == NULL) {
         fprintf(stderr, "randomDequeue: unknown trace var %s\n", v->name());
@@ -161,12 +161,12 @@ randomDequeueQueue::trace(TracedVar* v)
     if (tchan_) {
         char wrk[500];
         double t = Scheduler::instance().clock();
-        if(*p == 'c') {
-            sprintf(wrk, "c %g %d", t, int(*((TracedInt*) v)));
+        if (*p == 'c') {
+            sprintf(wrk, "c %g %d", t, int(*((TracedInt*)v)));
         }
         int n = strlen(wrk);
-        wrk[n] = '\n'; 
-        wrk[n+1] = 0;
-        (void)Tcl_Write(tchan_, wrk, n+1);
+        wrk[n] = '\n';
+        wrk[n + 1] = 0;
+        (void)Tcl_Write(tchan_, wrk, n + 1);
     }
 }

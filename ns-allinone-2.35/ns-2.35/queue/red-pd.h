@@ -35,7 +35,6 @@
  * @(#) $Header: /cvsroot/nsnam/ns-2/queue/red-pd.h,v 1.4 2001/01/10 23:30:14 sfloyd Exp $ (ACIRI)
  */
 
-
 #ifndef ns_red_pd_h
 #define ns_red_pd_h
 
@@ -46,103 +45,113 @@ class REDQueue;
 class RedPDFlow;
 
 class RedPDQueue : public REDQueue {
- public:	
-	RedPDQueue (const char * = "Drop", const char * = "Drop");
+public:
+    RedPDQueue(const char* = "Drop", const char* = "Drop");
 
-	int auto_;              // boolean to decide if automatic updates to rate estimates 
-	                                         // are required
-	int global_target_;     // boolean to decide if we have the same targetBW_ 
-	                                         // for all the monitored flows
-	double targetBW_;       // the global targetBW_ in bps
-	int noMonitored_;       // number of monitored flows
-	double unresponsive_penalty_;  //multiplicative penalty factor for flows marked unresponsive
-	                               // they get dropped with probability $prob*unresponsive_penalty_
-	
-	double P_testFRp_;      // to test the FRP thing
-	int noidle_;		// boolean to decide if unresponsive flows
-				//   should be dropped when queue is idle
- 
-	void setFlowMon(FlowMon * flowMon) {
-		flowMonitor_ = flowMon;
-	}
+    int auto_; // boolean to decide if automatic updates to rate estimates
+        // are required
+    int global_target_; // boolean to decide if we have the same targetBW_
+        // for all the monitored flows
+    double targetBW_; // the global targetBW_ in bps
+    int noMonitored_; // number of monitored flows
+    double unresponsive_penalty_; //multiplicative penalty factor for flows marked unresponsive
+        // they get dropped with probability $prob*unresponsive_penalty_
+
+    double P_testFRp_; // to test the FRP thing
+    int noidle_; // boolean to decide if unresponsive flows
+        //   should be dropped when queue is idle
+
+    void setFlowMon(FlowMon* flowMon)
+    {
+        flowMonitor_ = flowMon;
+    }
 
 protected:
-	int command(int argc, const char*const* argv);
-	void reset();
-	void enque(Packet* pkt);
+    int command(int argc, const char* const* argv);
+    void reset();
+    void enque(Packet* pkt);
 
-	int off_ip_;
+    int off_ip_;
 
-	FlowMon* flowMonitor_;        // the flowMonitor_ associated with the queue
-	char medTraceType[20];        //the type of trace object for mon early drops
-	NsObject * MEDTrace;          //the trace object for mon early drops
+    FlowMon* flowMonitor_; // the flowMonitor_ associated with the queue
+    char medTraceType[20]; //the type of trace object for mon early drops
+    NsObject* MEDTrace; //the trace object for mon early drops
 
-	double getP_monFlow(double current, double target) {
-		if (current <= 0 || current < target) 
-			return 0; //means don't drop
-		// the surviving probability is target/current
-		return 1 - (target/current);
-	}		
+    double getP_monFlow(double current, double target)
+    {
+        if (current <= 0 || current < target)
+            return 0; //means don't drop
+        // the surviving probability is target/current
+        return 1 - (target / current);
+    }
 };
- 
+
 class RedPDFlow : public Flow {
 
 public:
-	//default values - no drops
-	double targetBW_;                  // the target BW of this flow in bps
-	double currentBW_;                 // the current BW of the flow  in bps
-	int monitored_;                    // boolean: whether this flow is being monitored
-	int unresponsive_;                 // boolean: whether this flow is responsive
-	
-	double monitorStartTime_;          // time when we started monitoring this flow
-	double unresponsiveStartTime_;     // time when we declared this flow as unresponsive 
-	double lastDropTime_;              // time when the last packet from this flow was dropped 
-	                                   // actually the time when the currentBW_ exceeded targetBW_
+    //default values - no drops
+    double targetBW_; // the target BW of this flow in bps
+    double currentBW_; // the current BW of the flow  in bps
+    int monitored_; // boolean: whether this flow is being monitored
+    int unresponsive_; // boolean: whether this flow is responsive
 
-	int count;                         // number of packets since last drop
-	int auto_;                         // boolean: if rate estmation is going on
+    double monitorStartTime_; // time when we started monitoring this flow
+    double unresponsiveStartTime_; // time when we declared this flow as unresponsive
+    double lastDropTime_; // time when the last packet from this flow was dropped
+        // actually the time when the currentBW_ exceeded targetBW_
 
-	RedPDFlow() : targetBW_(0), currentBW_(0),  
-		monitored_(0), unresponsive_(0),
-		monitorStartTime_(0), unresponsiveStartTime_(0), lastDropTime_(0), 
-		count(0), auto_(0) {
-		
-		bind_bw("currentBW_", &currentBW_);
-		bind_bw("targetBW_", &targetBW_);
+    int count; // number of packets since last drop
+    int auto_; // boolean: if rate estmation is going on
 
-		bind_bool("monitored_", &monitored_);
-		bind_bool("unresponsive_", &unresponsive_);
+    RedPDFlow()
+        : targetBW_(0)
+        , currentBW_(0)
+        , monitored_(0)
+        , unresponsive_(0)
+        , monitorStartTime_(0)
+        , unresponsiveStartTime_(0)
+        , lastDropTime_(0)
+        , count(0)
+        , auto_(0)
+    {
 
-		bind("lastDropTime_", &lastDropTime_);
-		bind("monitorStartTime_", &monitorStartTime_);
-		bind("unresponsiveStartTime_", &unresponsiveStartTime_);
+        bind_bw("currentBW_", &currentBW_);
+        bind_bw("targetBW_", &targetBW_);
 
-		bind_bool("auto_", &auto_);
-	}
+        bind_bool("monitored_", &monitored_);
+        bind_bool("unresponsive_", &unresponsive_);
 
-	int monitored() {return monitored_; };
-	int unresponsive() {return unresponsive_; };
-	
-	RedPDFlow(double target, double current) {
-		targetBW_ = target;
-		currentBW_ = current;
-	};
+        bind("lastDropTime_", &lastDropTime_);
+        bind("monitorStartTime_", &monitorStartTime_);
+        bind("unresponsiveStartTime_", &unresponsiveStartTime_);
 
-	void set(double target, double current) {
-		targetBW_ = target;
-		currentBW_ = current;
-		monitored_ = 1;
-	};
-	
-	double getP_monFLow() {
-		if (currentBW_ <= 0 || currentBW_ < targetBW_) 
-			return 0; //means don't drop
-		
-		// the surviving probability is target/current
-		return 1 - (targetBW_/currentBW_);
-	};
+        bind_bool("auto_", &auto_);
+    }
 
+    int monitored() { return monitored_; };
+    int unresponsive() { return unresponsive_; };
+
+    RedPDFlow(double target, double current)
+    {
+        targetBW_ = target;
+        currentBW_ = current;
+    };
+
+    void set(double target, double current)
+    {
+        targetBW_ = target;
+        currentBW_ = current;
+        monitored_ = 1;
+    };
+
+    double getP_monFLow()
+    {
+        if (currentBW_ <= 0 || currentBW_ < targetBW_)
+            return 0; //means don't drop
+
+        // the surviving probability is target/current
+        return 1 - (targetBW_ / currentBW_);
+    };
 };
-
 
 #endif

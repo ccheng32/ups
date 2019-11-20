@@ -13,30 +13,30 @@
 #include <utility>
 
 struct bindesc {
-        PacketQueue *q_;        // underlying FIFO queue
-	int index;
-} ;
+    PacketQueue* q_; // underlying FIFO queue
+    int index;
+};
 
 struct Slack {
-  long long int orig_slack;
-  long long int arrival_time;
-} ;
+    long long int orig_slack;
+    long long int arrival_time;
+};
 
 typedef std::map<int, Slack> PerFlowMap;
 
 class edgeFQLstfQueue : public Queue {
-  public:   
+public:
     edgeFQLstfQueue();
 
-  protected:
+protected:
     // Stuff specific to the CoDel algorithm
     void enque(Packet* pkt);
     int dropPacket(int pr);
     Packet* deque();
-   
+
     bindesc bin_;
 
-    int curlen_;	    // the total occupancy of all bins in packets
+    int curlen_; // the total occupancy of all bins in packets
     int debug_;
     PerFlowMap per_flow_map;
     int srcid_;
@@ -44,13 +44,12 @@ class edgeFQLstfQueue : public Queue {
     double refresh_threshold_;
 
     // NS-specific junk
-    int command(int argc, const char*const* argv);
+    int command(int argc, const char* const* argv);
     void reset();
     void trace(TracedVar*); // routine to write trace records
 
-    Tcl_Channel tchan_;     // place to write trace records
-    TracedInt curq_;        // current qlen in bytes seen by arrivals
-
+    Tcl_Channel tchan_; // place to write trace records
+    TracedInt curq_; // current qlen in bytes seen by arrivals
 };
 
 #endif

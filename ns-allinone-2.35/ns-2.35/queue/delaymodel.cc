@@ -50,8 +50,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] =
-    "@(#) $Header: /cvsroot/nsnam/ns-2/queue/delaymodel.cc,v 1.9 2005/08/25 18:58:10 johnh Exp $ (UCB)";
+static const char rcsid[] = "@(#) $Header: /cvsroot/nsnam/ns-2/queue/delaymodel.cc,v 1.9 2005/08/25 18:58:10 johnh Exp $ (UCB)";
 #endif
 
 #include "packet.h"
@@ -59,48 +58,51 @@ static const char rcsid[] =
 
 static class DelayModelClass : public TclClass {
 public:
-	DelayModelClass() : TclClass("DelayModel") {}
-	TclObject* create(int, const char*const*) {
-		return (new DelayModel);
-	}
+    DelayModelClass()
+        : TclClass("DelayModel")
+    {
+    }
+    TclObject* create(int, const char* const*)
+    {
+        return (new DelayModel);
+    }
 } class_delaymodel;
 
-DelayModel::DelayModel() : Connector(), bandwidth_(0)
+DelayModel::DelayModel()
+    : Connector()
+    , bandwidth_(0)
 {
 }
 
-
-int DelayModel::command(int argc, const char*const* argv)
+int DelayModel::command(int argc, const char* const* argv)
 {
-	Tcl& tcl = Tcl::instance();
-	if (argc == 3) {
-		if (strcmp(argv[1], "ranvar") == 0) {
-			ranvar_ = (RandomVariable*) TclObject::lookup(argv[2]);
-			return (TCL_OK);
-		} else if (strcmp(argv[1], "bandwidth") == 0) {
-			bandwidth_ = atof(argv[2]);
-			return (TCL_OK);
-		} 
-	} else if (argc == 2) {
-		if (strcmp(argv[1], "ranvar") == 0) {
-			tcl.resultf("%s", ranvar_->name());
-			return (TCL_OK);
-		}
-	}
-	return Connector::command(argc, argv);
+    Tcl& tcl = Tcl::instance();
+    if (argc == 3) {
+        if (strcmp(argv[1], "ranvar") == 0) {
+            ranvar_ = (RandomVariable*)TclObject::lookup(argv[2]);
+            return (TCL_OK);
+        } else if (strcmp(argv[1], "bandwidth") == 0) {
+            bandwidth_ = atof(argv[2]);
+            return (TCL_OK);
+        }
+    } else if (argc == 2) {
+        if (strcmp(argv[1], "ranvar") == 0) {
+            tcl.resultf("%s", ranvar_->name());
+            return (TCL_OK);
+        }
+    }
+    return Connector::command(argc, argv);
 }
 
 void DelayModel::recv(Packet* p, Handler*)
 {
-	double delay = ranvar_->value();
-	//static int tmp = 0;
+    double delay = ranvar_->value();
+    //static int tmp = 0;
 
-	double txt = txtime(p);
-	Scheduler& s = Scheduler::instance();
-	//printf ("trans %f, delay %f\n", txt, delay);
-	s.schedule(target_, p, txt + delay);
+    double txt = txtime(p);
+    Scheduler& s = Scheduler::instance();
+    //printf ("trans %f, delay %f\n", txt, delay);
+    s.schedule(target_, p, txt + delay);
 
-	//s.schedule(h, &intr_, txt);
+    //s.schedule(h, &intr_, txt);
 }
-
-

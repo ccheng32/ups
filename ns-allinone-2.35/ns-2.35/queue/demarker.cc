@@ -52,107 +52,109 @@
 
 static class DemarkerClass : public TclClass {
 public:
-	DemarkerClass() : TclClass("Queue/Demarker") {}
-	TclObject* create(int, const char*const*) {
-		return (new Demarker);
-	}
+    DemarkerClass()
+        : TclClass("Queue/Demarker")
+    {
+    }
+    TclObject* create(int, const char* const*)
+    {
+        return (new Demarker);
+    }
 } class_demarker;
 
-Demarker::Demarker() {
-	q_ = new PacketQueue; 
-  
-	last_monitor_update_=0.0;
-	monitoring_window_ = 0.1;
-	
-	for (int i=0; i<=NO_CLASSES; i++) {
-		demarker_arrvs_[i]=0;
-		arrived_Bits_[i] = 0;
-	}
-  // Binding arrays between cc and tcl still not supported by tclcl...
-  if (NO_CLASSES != 4) {
-	printf("Change Demarker's code!!!\n\n");
-	abort();
-  }
-  bind("demarker_arrvs1_",    &(demarker_arrvs_[1]));
-  bind("demarker_arrvs2_",    &(demarker_arrvs_[2]));
-  bind("demarker_arrvs3_",    &(demarker_arrvs_[3]));
-  bind("demarker_arrvs4_",    &(demarker_arrvs_[4]));
+Demarker::Demarker()
+{
+    q_ = new PacketQueue;
+
+    last_monitor_update_ = 0.0;
+    monitoring_window_ = 0.1;
+
+    for (int i = 0; i <= NO_CLASSES; i++) {
+        demarker_arrvs_[i] = 0;
+        arrived_Bits_[i] = 0;
+    }
+    // Binding arrays between cc and tcl still not supported by tclcl...
+    if (NO_CLASSES != 4) {
+        printf("Change Demarker's code!!!\n\n");
+        abort();
+    }
+    bind("demarker_arrvs1_", &(demarker_arrvs_[1]));
+    bind("demarker_arrvs2_", &(demarker_arrvs_[2]));
+    bind("demarker_arrvs3_", &(demarker_arrvs_[3]));
+    bind("demarker_arrvs4_", &(demarker_arrvs_[4]));
 }
 
-
-
-int Demarker::command(int argc, const char*const* argv) {
-	if (argc == 3) {
-		if (strcmp(argv[1], "trace-file") == 0) {
-			file_name_ = new(char[500]);
-			strcpy(file_name_,argv[2]);
-			if (strcmp(file_name_,"null") != 0) {
-				demarker_type_ = VERBOSE;
-				for (int i=1; i<=NO_CLASSES; i++) {
-					char filename[500]; 
-					sprintf(filename,"%s.%d", file_name_,i);
-					if ((delay_tr_[i] = fopen(filename,"w"))==NULL) {
-						printf("Problem with opening the trace files\n");
-						abort();
-					}
-				}
-			} else {
-				demarker_type_ = QUIET;
-			}
-			return (TCL_OK);
-		} else if (strcmp(argv[1], "id") == 0) {
-			link_id_ = (int)atof(argv[2]);
-			return (TCL_OK);
-		} 
-	}
-	return Queue::command(argc, argv);
+int Demarker::command(int argc, const char* const* argv)
+{
+    if (argc == 3) {
+        if (strcmp(argv[1], "trace-file") == 0) {
+            file_name_ = new (char[500]);
+            strcpy(file_name_, argv[2]);
+            if (strcmp(file_name_, "null") != 0) {
+                demarker_type_ = VERBOSE;
+                for (int i = 1; i <= NO_CLASSES; i++) {
+                    char filename[500];
+                    sprintf(filename, "%s.%d", file_name_, i);
+                    if ((delay_tr_[i] = fopen(filename, "w")) == NULL) {
+                        printf("Problem with opening the trace files\n");
+                        abort();
+                    }
+                }
+            } else {
+                demarker_type_ = QUIET;
+            }
+            return (TCL_OK);
+        } else if (strcmp(argv[1], "id") == 0) {
+            link_id_ = (int)atof(argv[2]);
+            return (TCL_OK);
+        }
+    }
+    return Queue::command(argc, argv);
 }
 
-
-
-void Demarker::enque(Packet* p) {
-	q_->enque(p);
-	if (q_->length() >= qlim_) {
-		q_->remove(p);
-		drop(p);
-		printf("Packet drops in Demarker of type:%d\n", demarker_type_);
-	}
+void Demarker::enque(Packet* p)
+{
+    q_->enque(p);
+    if (q_->length() >= qlim_) {
+        q_->remove(p);
+        drop(p);
+        printf("Packet drops in Demarker of type:%d\n", demarker_type_);
+    }
 }
 
+Packet* Demarker::deque()
+{
+    Packet* p = q_->deque();
+    if (p == NULL)
+        return p;
 
+    hdr_ip* iph = hdr_ip::access(p);
+    hdr_cmn* cm_h = hdr_cmn::access(p);
+    double cur_time = Scheduler::instance().clock();
 
-Packet* Demarker::deque() {
-  Packet* p= q_->deque();
-  if (p==NULL) return p;
-  
-  hdr_ip*  iph = hdr_ip::access(p);
-  hdr_cmn* cm_h	= hdr_cmn::access(p);
-  double  cur_time  = Scheduler::instance().clock();
+    int cls = iph->prio_;
+    if ((cls < 1) || (cls > NO_CLASSES)) {
+        printf("Wrong class type in Demarker-deque (S=%d, D=%d, FID=%d, Class=%d)\n",
+            (int)(iph->src().addr_), (int)(iph->dst().addr_),
+            iph->fid_, iph->prio_);
 
-  int cls = iph->prio_;
-  if ((cls<1) || (cls>NO_CLASSES)) {
-    printf("Wrong class type in Demarker-deque (S=%d, D=%d, FID=%d, Class=%d)\n",
-	   (int)(iph->src().addr_), (int)(iph->dst().addr_),
-	   iph->fid_, iph->prio_);
-    
-    fflush(stdout);
-    abort();
-  }
-  demarker_arrvs_[cls] += 1.;
+        fflush(stdout);
+        abort();
+    }
+    demarker_arrvs_[cls] += 1.;
 
- 
-  if (demarker_type_ == VERBOSE) {
-    // Write end-to-end delay of packet in per class trace file
-    if (cur_time > START_STATISTICS) {
-      double pack_del = cur_time - cm_h->ts_arr_;
-      cm_h->ts_arr_=0;    // This stupid thing is required..
-      // print arrival time and delay
-      fprintf(delay_tr_[cls], "%.5f %.5f\n", 
-	      cur_time, pack_del);
-    }    
- 
+    if (demarker_type_ == VERBOSE) {
+        // Write end-to-end delay of packet in per class trace file
+        if (cur_time > START_STATISTICS) {
+            double pack_del = cur_time - cm_h->ts_arr_;
+            cm_h->ts_arr_ = 0; // This stupid thing is required..
+            // print arrival time and delay
+            fprintf(delay_tr_[cls], "%.5f %.5f\n",
+                cur_time, pack_del);
+        }
+
+        return p;
+    }
+
     return p;
-  }
-  
-  return p;
 }

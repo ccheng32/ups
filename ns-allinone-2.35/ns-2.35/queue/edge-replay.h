@@ -14,43 +14,41 @@
 #include <utility>
 
 struct bindesc {
-        PacketQueue *q_;        // underlying FIFO queue
-	int index;
-} ;
+    PacketQueue* q_; // underlying FIFO queue
+    int index;
+};
 
 struct Slack {
-  long long int deadline;
-  long long int arrival_time;
-} ;
+    long long int deadline;
+    long long int arrival_time;
+};
 
 typedef std::map<std::pair<int, int>, Slack> SlackMap;
 
 class edgeReplayQueue : public Queue {
-  public:   
+public:
     edgeReplayQueue();
 
-
-  protected:
+protected:
     void enque(Packet* pkt);
     int dropPacket(int pr);
     Packet* deque();
-   
+
     bindesc bin_;
 
-    int curlen_;	    // the total occupancy of all bins in packets
+    int curlen_; // the total occupancy of all bins in packets
     int debug_;
     SlackMap slack_map;
     int srcid_;
     int microsec_;
 
     // NS-specific junk
-    int command(int argc, const char*const* argv);
+    int command(int argc, const char* const* argv);
     void reset();
     void trace(TracedVar*); // routine to write trace records
 
-    Tcl_Channel tchan_;     // place to write trace records
-    TracedInt curq_;        // current qlen in bytes seen by arrivals
-
+    Tcl_Channel tchan_; // place to write trace records
+    TracedInt curq_; // current qlen in bytes seen by arrivals
 };
 
 #endif

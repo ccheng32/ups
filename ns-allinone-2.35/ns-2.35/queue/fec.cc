@@ -41,8 +41,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] =
-    "@(#) $Header: /cvsroot/nsnam/ns-2/queue/fec.cc,v 1.1 2001/03/07 18:30:02 jahn Exp $ (UCB)";
+static const char rcsid[] = "@(#) $Header: /cvsroot/nsnam/ns-2/queue/fec.cc,v 1.1 2001/03/07 18:30:02 jahn Exp $ (UCB)";
 #endif
 
 #include "config.h"
@@ -52,80 +51,85 @@ static const char rcsid[] =
 #include "flags.h"
 #include "mcast_ctrl.h"
 #include "fec.h"
-#include "srm-headers.h"		// to get the hdr_srm structure
+#include "srm-headers.h" // to get the hdr_srm structure
 #include "classifier.h"
 
 static class FECModelClass : public TclClass {
 public:
-	FECModelClass() : TclClass("FECModel") {}
-	TclObject* create(int, const char*const*) {
-		return (new FECModel);
-	}
+    FECModelClass()
+        : TclClass("FECModel")
+    {
+    }
+    TclObject* create(int, const char* const*)
+    {
+        return (new FECModel);
+    }
 } class_fecmodel;
 
-FECModel::FECModel() : firstTime_(1), FECstrength_(1) 
+FECModel::FECModel()
+    : firstTime_(1)
+    , FECstrength_(1)
 {
 }
 
-int FECModel::command(int argc, const char*const* argv)
+int FECModel::command(int argc, const char* const* argv)
 {
-	Tcl& tcl = Tcl::instance();
-	if (argc == 3) {
-		if (strcmp(argv[1], "FECstrength") == 0) {
-			FECstrength_ = atoi(argv[2]);
-			return (TCL_OK);
-		}
-	} else if (argc == 2) {
-		if (strcmp(argv[1], "FECstrength") == 0) {
-			tcl.resultf("%d", FECstrength_);
-			return (TCL_OK);
-		} 
-	}
-	return BiConnector::command(argc, argv);
+    Tcl& tcl = Tcl::instance();
+    if (argc == 3) {
+        if (strcmp(argv[1], "FECstrength") == 0) {
+            FECstrength_ = atoi(argv[2]);
+            return (TCL_OK);
+        }
+    } else if (argc == 2) {
+        if (strcmp(argv[1], "FECstrength") == 0) {
+            tcl.resultf("%d", FECstrength_);
+            return (TCL_OK);
+        }
+    }
+    return BiConnector::command(argc, argv);
 }
 
 int fix_ = 0;
 void FECModel::recv(Packet* p, Handler* h)
 {
-	hdr_cmn* ch = hdr_cmn::access(p);
+    hdr_cmn* ch = hdr_cmn::access(p);
 
-	if(ch->direction() == hdr_cmn::DOWN) {
-		addfec(p);
-		downtarget_->recv(p, h);
-		return;
-	} else {
-		if(ch->errbitcnt() > FECstrength_) {
-			Packet::free(p);
-			return;
-		} else if (ch->errbitcnt() && (ch->errbitcnt() <= FECstrength_)) {
-			ch->errbitcnt() = 0;
-			ch->error() = 0;
-			printf("FEC: %d fixed\n", fix_++);
-		}
-		subfec(p);
-		uptarget_->recv(p, h);
-	}
+    if (ch->direction() == hdr_cmn::DOWN) {
+        addfec(p);
+        downtarget_->recv(p, h);
+        return;
+    } else {
+        if (ch->errbitcnt() > FECstrength_) {
+            Packet::free(p);
+            return;
+        } else if (ch->errbitcnt() && (ch->errbitcnt() <= FECstrength_)) {
+            ch->errbitcnt() = 0;
+            ch->error() = 0;
+            printf("FEC: %d fixed\n", fix_++);
+        }
+        subfec(p);
+        uptarget_->recv(p, h);
+    }
 }
 
 void FECModel::addfec(Packet* p)
 {
-	int bit = hdr_cmn::access(p)->size() * 8;
-	FECbyte_ = (int)(log(bit) / log(2));
-	FECbyte_ *= FECstrength_;
-	FECbyte_ = (FECbyte_ + 7) / 8;
+    int bit = hdr_cmn::access(p)->size() * 8;
+    FECbyte_ = (int)(log(bit) / log(2));
+    FECbyte_ *= FECstrength_;
+    FECbyte_ = (FECbyte_ + 7) / 8;
 
-	//	firstTime_ = 0;
+    //	firstTime_ = 0;
 
-        // printf("FEC Down = %d \n", hdr_cmn::access(p)->size());	
+    // printf("FEC Down = %d \n", hdr_cmn::access(p)->size());
 
-	hdr_cmn::access(p)->size() += FECbyte_;
-	hdr_cmn::access(p)->fecsize() = FECbyte_;
+    hdr_cmn::access(p)->size() += FECbyte_;
+    hdr_cmn::access(p)->fecsize() = FECbyte_;
 }
 
 void FECModel::subfec(Packet* p)
 {
-	FECbyte_ = hdr_cmn::access(p)->fecsize();
-	hdr_cmn::access(p)->size() -= FECbyte_;
-        // printf("FEC Up = %d \n", hdr_cmn::access(p)->size());	
+    FECbyte_ = hdr_cmn::access(p)->fecsize();
+    hdr_cmn::access(p)->size() -= FECbyte_;
+    // printf("FEC Up = %d \n", hdr_cmn::access(p)->size());
 }
-

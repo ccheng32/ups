@@ -13,27 +13,24 @@
 #define MAXBINS 2
 #define DEBUG 1
 
-
 struct bindesc {
-        PacketQueue *q_;        // underlying FIFO queue
-	int index;
-} ;
+    PacketQueue* q_; // underlying FIFO queue
+    int index;
+};
 
 class randomDequeueQueue : public Queue {
-  public:   
+public:
     randomDequeueQueue();
 
-
-  protected:
+protected:
     void enque(Packet* pkt);
     int dropPacket(int pr);
     Packet* deque();
-   
-    bindesc bin_[MAXBINS];
-    
 
-    int curlen_;	    // the total occupancy of all bins in packets
-    int maxbins_;	    // for tcl override of MAXBINS (can only make smaller)
+    bindesc bin_[MAXBINS];
+
+    int curlen_; // the total occupancy of all bins in packets
+    int maxbins_; // for tcl override of MAXBINS (can only make smaller)
     int debug_;
     int maxprio_;
     int logid_;
@@ -41,13 +38,12 @@ class randomDequeueQueue : public Queue {
     int routelog_;
 
     // NS-specific junk
-    int command(int argc, const char*const* argv);
+    int command(int argc, const char* const* argv);
     void reset();
     void trace(TracedVar*); // routine to write trace records
 
-    Tcl_Channel tchan_;     // place to write trace records
-    TracedInt curq_;        // current qlen in bytes seen by arrivals
-
+    Tcl_Channel tchan_; // place to write trace records
+    TracedInt curq_; // current qlen in bytes seen by arrivals
 };
 
 #endif

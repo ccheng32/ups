@@ -33,8 +33,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] =
-    "@(#) $Header: /cvsroot/nsnam/ns-2/queue/queue.cc,v 1.29 2004/10/28 01:22:48 sfloyd Exp $ (LBL)";
+static const char rcsid[] = "@(#) $Header: /cvsroot/nsnam/ns-2/queue/queue.cc,v 1.29 2004/10/28 01:22:48 sfloyd Exp $ (LBL)";
 #endif
 
 #include "queue.h"
@@ -45,251 +44,257 @@ std::ofstream Queue::ofs_queueLog;
 
 void PacketQueue::remove(Packet* target)
 {
-	for (Packet *pp= 0, *p= head_; p; pp= p, p= p->next_) {
-		if (p == target) {
-			if (!pp) deque();
-			else {
-				if (p == tail_) 
-					tail_= pp;
-				pp->next_= p->next_;
-				--len_;
-				bytes_ -= hdr_cmn::access(p)->size();
-			}
-			return;
-		}
-	}
-	fprintf(stderr, "PacketQueue:: remove() couldn't find target\n");
-	abort();
+    for (Packet *pp = 0, *p = head_; p; pp = p, p = p->next_) {
+        if (p == target) {
+            if (!pp)
+                deque();
+            else {
+                if (p == tail_)
+                    tail_ = pp;
+                pp->next_ = p->next_;
+                --len_;
+                bytes_ -= hdr_cmn::access(p)->size();
+            }
+            return;
+        }
+    }
+    fprintf(stderr, "PacketQueue:: remove() couldn't find target\n");
+    abort();
 }
 
 /*
  * Remove packet pkt located after packet prev on the queue.  Either p or prev
  * could be NULL.  If prev is NULL then pkt must be the head of the queue.
  */
-void PacketQueue::remove(Packet* pkt, Packet *prev) //XXX: screwy
+void PacketQueue::remove(Packet* pkt, Packet* prev) //XXX: screwy
 {
-	if (pkt) {
-		if (head_ == pkt)
-			PacketQueue::deque(); /* decrements len_ internally */
-		else {
-			prev->next_ = pkt->next_;
-			if (tail_ == pkt)
-				tail_ = prev;
-			--len_;
-			bytes_ -= hdr_cmn::access(pkt)->size();
-		}
-	}
-	return;
+    if (pkt) {
+        if (head_ == pkt)
+            PacketQueue::deque(); /* decrements len_ internally */
+        else {
+            prev->next_ = pkt->next_;
+            if (tail_ == pkt)
+                tail_ = prev;
+            --len_;
+            bytes_ -= hdr_cmn::access(pkt)->size();
+        }
+    }
+    return;
 }
 
 void QueueHandler::handle(Event*)
 {
-	queue_.resume();
+    queue_.resume();
 }
 
-Queue::~Queue() {
-}
-
-
-Queue::Queue() : Connector(), blocked_(0), unblock_on_resume_(1), qh_(*this),
-		 pq_(0), 
-		 last_change_(0), /* temporarily NULL */
-		 old_util_(0), period_begin_(0), cur_util_(0), buf_slot_(0),
-		 util_buf_(NULL), totalQueueSize_(0), queueLogTimer_(this)
+Queue::~Queue()
 {
-	bind("limit_", &qlim_);
-	bind("util_weight_", &util_weight_);
-	bind_bool("blocked_", &blocked_);
-	bind_bool("unblock_on_resume_", &unblock_on_resume_);
-	bind("util_check_intv_", &util_check_intv_);
-	bind("util_records_", &util_records_);
-        //Added by Radhika
-        bind("queueLogTime_", &queueLogTime_);
-        bind("queueN1_", &queueN1_);
-        bind("queueN2_", &queueN2_);
-        bind("is_tcp_", &is_tcp_);
-        //Added by Radhika for logging
-        if(queueLogTime_ < 100000) {
-          if(!Queue::ofs_queueLog.is_open()) {
-                ofs_queueLog.open("queuesize.txt");
-          }
-        } 
-        logTime_ = LOGINTERVAL;
-        queueLogTimer_.resched(queueLogTime_);
-
-	if (util_records_ > 0) {
-		util_buf_ = new double[util_records_];
-		if (util_buf_ == NULL) {
-			printf("Error allocating util_bufs!");
-			util_records_ = 0;
-		}
-		for (int i = 0; i < util_records_; i++) {
-			util_buf_[i] = 0;
-		}
-	}
 }
 
-int Queue::getSeqNo (Packet* pkt) {
+Queue::Queue()
+    : Connector()
+    , blocked_(0)
+    , unblock_on_resume_(1)
+    , qh_(*this)
+    , pq_(0)
+    , last_change_(0)
+    , /* temporarily NULL */
+    old_util_(0)
+    , period_begin_(0)
+    , cur_util_(0)
+    , buf_slot_(0)
+    , util_buf_(NULL)
+    , totalQueueSize_(0)
+    , queueLogTimer_(this)
+{
+    bind("limit_", &qlim_);
+    bind("util_weight_", &util_weight_);
+    bind_bool("blocked_", &blocked_);
+    bind_bool("unblock_on_resume_", &unblock_on_resume_);
+    bind("util_check_intv_", &util_check_intv_);
+    bind("util_records_", &util_records_);
+    //Added by Radhika
+    bind("queueLogTime_", &queueLogTime_);
+    bind("queueN1_", &queueN1_);
+    bind("queueN2_", &queueN2_);
+    bind("is_tcp_", &is_tcp_);
+    //Added by Radhika for logging
+    if (queueLogTime_ < 100000) {
+        if (!Queue::ofs_queueLog.is_open()) {
+            ofs_queueLog.open("queuesize.txt");
+        }
+    }
+    logTime_ = LOGINTERVAL;
+    queueLogTimer_.resched(queueLogTime_);
 
-          if(is_tcp_) {
-            hdr_tcp *th = hdr_tcp::access(pkt);
-            int seq = th->seqno();
-            return seq;
-          }
-          hdr_rtp *rh = hdr_rtp::access(pkt);
-          int seq = rh->seqno();
-          return seq;
+    if (util_records_ > 0) {
+        util_buf_ = new double[util_records_];
+        if (util_buf_ == NULL) {
+            printf("Error allocating util_bufs!");
+            util_records_ = 0;
+        }
+        for (int i = 0; i < util_records_; i++) {
+            util_buf_[i] = 0;
+        }
+    }
 }
 
+int Queue::getSeqNo(Packet* pkt)
+{
+
+    if (is_tcp_) {
+        hdr_tcp* th = hdr_tcp::access(pkt);
+        int seq = th->seqno();
+        return seq;
+    }
+    hdr_rtp* rh = hdr_rtp::access(pkt);
+    int seq = rh->seqno();
+    return seq;
+}
 
 void Queue::recv(Packet* p, Handler*)
 {
-	double now = Scheduler::instance().clock();
-	enque(p);
-	if (!blocked_) {
-		/*
+    double now = Scheduler::instance().clock();
+    enque(p);
+    if (!blocked_) {
+        /*
 		 * We're not blocked.  Get a packet and send it on.
 		 * We perform an extra check because the queue
 		 * might drop the packet even if it was
 		 * previously empty!  (e.g., RED can do this.)
 		 */
-		p = deque();
-		if (p != 0) {
-			utilUpdate(last_change_, now, blocked_);
-			last_change_ = now;
-			blocked_ = 1;
-			target_->recv(p, &qh_);
-		}
-	}
+        p = deque();
+        if (p != 0) {
+            utilUpdate(last_change_, now, blocked_);
+            last_change_ = now;
+            blocked_ = 1;
+            target_->recv(p, &qh_);
+        }
+    }
 }
 
-void Queue::utilUpdate(double int_begin, double int_end, int link_state) {
-double decay;
-
-	decay = exp(-util_weight_ * (int_end - int_begin));
-	old_util_ = link_state + (old_util_ - link_state) * decay;
-
-	// PS: measuring peak utilization
-	if (util_records_ == 0)
-		return; // We don't track peak utilization
-
-	double intv = int_end - int_begin;
-	double tot_intv = int_begin - period_begin_;
-	if (intv || tot_intv) {
-		int guard = 0; // for protecting against long while loops 
-		cur_util_ = (link_state * intv + cur_util_ * tot_intv) /
-			(intv + tot_intv);
-		while (tot_intv + intv > util_check_intv_ &&
-		       guard++ < util_records_) {
-
-			period_begin_ = int_end;
-			util_buf_[buf_slot_] = cur_util_;
-			buf_slot_ = (buf_slot_ + 1) % util_records_;
-			cur_util_ = link_state;
-			intv -= util_check_intv_;
-		}
-	}
-}
-
-double Queue::utilization(void) 
+void Queue::utilUpdate(double int_begin, double int_end, int link_state)
 {
-	double now = Scheduler::instance().clock();
-	
-	utilUpdate(last_change_, now, blocked_);
-	last_change_ = now;
+    double decay;
 
-	return old_util_;
-			
+    decay = exp(-util_weight_ * (int_end - int_begin));
+    old_util_ = link_state + (old_util_ - link_state) * decay;
+
+    // PS: measuring peak utilization
+    if (util_records_ == 0)
+        return; // We don't track peak utilization
+
+    double intv = int_end - int_begin;
+    double tot_intv = int_begin - period_begin_;
+    if (intv || tot_intv) {
+        int guard = 0; // for protecting against long while loops
+        cur_util_ = (link_state * intv + cur_util_ * tot_intv) / (intv + tot_intv);
+        while (tot_intv + intv > util_check_intv_ && guard++ < util_records_) {
+
+            period_begin_ = int_end;
+            util_buf_[buf_slot_] = cur_util_;
+            buf_slot_ = (buf_slot_ + 1) % util_records_;
+            cur_util_ = link_state;
+            intv -= util_check_intv_;
+        }
+    }
+}
+
+double Queue::utilization(void)
+{
+    double now = Scheduler::instance().clock();
+
+    utilUpdate(last_change_, now, blocked_);
+    last_change_ = now;
+
+    return old_util_;
 }
 
 double Queue::peak_utilization(void)
 {
-	double now = Scheduler::instance().clock();
-	double peak = 0;
-	int i;
-	
-	// PS: if peak_utilization tracking is disabled,
-	// return the weighed avg instead
-	if (util_records_ == 0)
-		return utilization();
+    double now = Scheduler::instance().clock();
+    double peak = 0;
+    int i;
 
-	utilUpdate(last_change_, now, blocked_);
-	last_change_ = now;
+    // PS: if peak_utilization tracking is disabled,
+    // return the weighed avg instead
+    if (util_records_ == 0)
+        return utilization();
 
-	for (i = 0; i < util_records_; i++) {
-		if (util_buf_[i] > peak)
-			peak = util_buf_[i];
-	}
-	return peak;
+    utilUpdate(last_change_, now, blocked_);
+    last_change_ = now;
+
+    for (i = 0; i < util_records_; i++) {
+        if (util_buf_[i] > peak)
+            peak = util_buf_[i];
+    }
+    return peak;
 }
 
 void Queue::updateStats(int queuesize)
 {
-        double now = Scheduler::instance().clock();
+    double now = Scheduler::instance().clock();
+    double newtime = now - total_time_;
+    if (newtime > 0.0) {
+        double oldave = true_ave_;
+        double oldtime = total_time_;
         double newtime = now - total_time_;
-        if (newtime > 0.0) {
-                double oldave = true_ave_;
-                double oldtime = total_time_;
-                double newtime = now - total_time_;
-                true_ave_ = (oldtime * oldave + newtime * queuesize) /now;
-                total_time_ = now;
-        }
+        true_ave_ = (oldtime * oldave + newtime * queuesize) / now;
+        total_time_ = now;
+    }
 }
 
 void Queue::resume()
 {
-	double now = Scheduler::instance().clock();
-	Packet* p = deque();
-	if (p != 0) {
-		target_->recv(p, &qh_);
-	} else {
-		if (unblock_on_resume_) {
-			utilUpdate(last_change_, now, blocked_);
-			last_change_ = now;
-			blocked_ = 0;
-		}
-		else {
-			utilUpdate(last_change_, now, blocked_);
-			last_change_ = now;
-			blocked_ = 1;
-		}
-	}
+    double now = Scheduler::instance().clock();
+    Packet* p = deque();
+    if (p != 0) {
+        target_->recv(p, &qh_);
+    } else {
+        if (unblock_on_resume_) {
+            utilUpdate(last_change_, now, blocked_);
+            last_change_ = now;
+            blocked_ = 0;
+        } else {
+            utilUpdate(last_change_, now, blocked_);
+            last_change_ = now;
+            blocked_ = 1;
+        }
+    }
 }
 
-void QueueLogTimer::expire(Event *e)
+void QueueLogTimer::expire(Event* e)
 {
-        module->log_queue_size();
+    module->log_queue_size();
 }
 
 void Queue::log_queue_size()
 {
-      if (Scheduler::instance().clock() >= logTime_) { 
+    if (Scheduler::instance().clock() >= logTime_) {
         double avgQueueSize = double(totalQueueSize_) * queueLogTime_ / LOGINTERVAL;
         Queue::ofs_queueLog << Scheduler::instance().clock() << " " << queueN1_ << " " << queueN2_ << " " << avgQueueSize << "\n";
-        totalQueueSize_  = 0;
+        totalQueueSize_ = 0;
         logTime_ = logTime_ + LOGINTERVAL;
-      }
-      totalQueueSize_ += byteLength();
-      queueLogTimer_.resched(queueLogTime_);
+    }
+    totalQueueSize_ += byteLength();
+    queueLogTimer_.resched(queueLogTime_);
 }
-
 
 void Queue::reset()
 {
-	Packet* p;
-	total_time_ = 0.0;
-	true_ave_ = 0.0;
-	while ((p = deque()) != 0)
-		drop(p);
+    Packet* p;
+    total_time_ = 0.0;
+    true_ave_ = 0.0;
+    while ((p = deque()) != 0)
+        drop(p);
 
-        totalQueueSize_ = 0;
-        //Added by Radhika for logging
-        if(queueLogTime_ < 100000) {
-          if(!Queue::ofs_queueLog.is_open()) {
-                ofs_queueLog.open("queuesize.txt");
-          }
-        } 
-        logTime_ = LOGINTERVAL;
-        queueLogTimer_.resched(queueLogTime_);
+    totalQueueSize_ = 0;
+    //Added by Radhika for logging
+    if (queueLogTime_ < 100000) {
+        if (!Queue::ofs_queueLog.is_open()) {
+            ofs_queueLog.open("queuesize.txt");
+        }
+    }
+    logTime_ = LOGINTERVAL;
+    queueLogTimer_.resched(queueLogTime_);
 }
-

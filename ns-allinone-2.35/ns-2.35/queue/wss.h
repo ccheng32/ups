@@ -33,7 +33,6 @@
  *
  */
 
-
 /* it is used to generate the Weight Spread Sequence of SRR 
  * WSS and SRR are named by Dr. W. Qi 
  */
@@ -48,106 +47,112 @@
 class PacketSRR;
 class SRR;
 
-int power( int base, int j)
+int power(int base, int j)
 {
-	int r=1; int i;
-	if(j==0) return 1;
-	else
-	{
-		for(i=0;i<j;i++)
-		r*=base;
-	}
+    int r = 1;
+    int i;
+    if (j == 0)
+        return 1;
+    else {
+        for (i = 0; i < j; i++)
+            r *= base;
+    }
 
-	return r;
+    return r;
 }
 
-void rawScan( int i, int j, int N, int *p)
+void rawScan(int i, int j, int N, int* p)
 {
-	if(j==N)
-	{
-		*p=N;
-		return;
-	}
+    if (j == N) {
+        *p = N;
+        return;
+    }
 
-	if(i%(int)power(2,j))
-	{
-		*p=j;
-		return;
-	}
-	else
-		rawScan(i, j+1, N, p);
+    if (i % (int)power(2, j)) {
+        *p = j;
+        return;
+    } else
+        rawScan(i, j + 1, N, p);
 }
 
-class WSS{
-	public:WSS(): currOrder(1), items(0), ptr(0), pwss(0){ }
-	friend class SRR;
-public:	
-	int maxOrder; // the order of the WSS
-	int currOrder; // current order of WSS
-	int items; //how many items are in the WSS
-	unsigned int ptr;
-	int *pwss;  // 
-	void init(int i);
+class WSS {
+public:
+    WSS()
+        : currOrder(1)
+        , items(0)
+        , ptr(0)
+        , pwss(0)
+    {
+    }
+    friend class SRR;
 
-	int get_ptr()
-	{
-	  return ptr;
-	}
+public:
+    int maxOrder; // the order of the WSS
+    int currOrder; // current order of WSS
+    int items; //how many items are in the WSS
+    unsigned int ptr;
+    int* pwss; //
+    void init(int i);
 
-	void set_ptr (int val){
-		ptr = val;
-	}
+    int get_ptr()
+    {
+        return ptr;
+    }
 
-	void inc_ptr ( int order)
-	{
-		ptr += 1;
-		if((int)ptr > ((1<<order)-2))
-		{
-			ptr = 0;
-		}
-	}
+    void set_ptr(int val)
+    {
+        ptr = val;
+    }
 
-	int get(int order);
+    void inc_ptr(int order)
+    {
+        ptr += 1;
+        if ((int)ptr > ((1 << order) - 2)) {
+            ptr = 0;
+        }
+    }
 
-	void print(); // for debug purpose
+    int get(int order);
 
+    void print(); // for debug purpose
 };
 
-void WSS::init(int i){
-	int j;
-	maxOrder=i;
-	items= (1<<maxOrder)-1;
-	ptr=0;
-	pwss=(int*)malloc(sizeof(int)*items);
-	
-	for(j=1;j<=items; j++)
-		rawScan(j, 1, maxOrder,  (int*)(pwss+j-1));
+void WSS::init(int i)
+{
+    int j;
+    maxOrder = i;
+    items = (1 << maxOrder) - 1;
+    ptr = 0;
+    pwss = (int*)malloc(sizeof(int) * items);
+
+    for (j = 1; j <= items; j++)
+        rawScan(j, 1, maxOrder, (int*)(pwss + j - 1));
 }
 
-int WSS::get(int order)  // it should also tells the WSS the order
-{  
-	int value;
+int WSS::get(int order) // it should also tells the WSS the order
+{
+    int value;
 
-	currOrder=order;
+    currOrder = order;
 
-	//printf("get wss\n");
-	int tmp = 1 << order;
-	if((int)ptr > (tmp-2))
-	{
-		printf("tmp :%d \n", tmp);
-		printf("error, too large ptr:%d, order:%d\n", (int)ptr, order);
-		exit(0);
-	}
+    //printf("get wss\n");
+    int tmp = 1 << order;
+    if ((int)ptr > (tmp - 2)) {
+        printf("tmp :%d \n", tmp);
+        printf("error, too large ptr:%d, order:%d\n", (int)ptr, order);
+        exit(0);
+    }
 
-	value= *(pwss+ptr);
-	return value;
+    value = *(pwss + ptr);
+    return value;
 }
 
-void WSS::print(){
-	int i;
-	for(i=0;i<items;i++)
-		printf("%4d", *(pwss+i));
-	printf("\n");
+void WSS::print()
+{
+    int i;
+    for (i = 0; i < items; i++)
+        printf("%4d", *(pwss + i));
+    printf("\n");
 }
 
 /*

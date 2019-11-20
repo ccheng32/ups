@@ -11,20 +11,28 @@
 
 class SemanticRIOQueue : public RIOQueue {
 public:
-	SemanticRIOQueue() : RIOQueue() {}
-	Packet* pickPacketToDrop() {
-		return(((SemanticPacketQueue*) pq_)->pickPacketToDrop());
-	}
-	Packet* pickPacketForECN(Packet *pkt) {
-		return(((SemanticPacketQueue*) pq_)->pickPacketForECN(pkt));
-	}
+    SemanticRIOQueue()
+        : RIOQueue()
+    {
+    }
+    Packet* pickPacketToDrop()
+    {
+        return (((SemanticPacketQueue*)pq_)->pickPacketToDrop());
+    }
+    Packet* pickPacketForECN(Packet* pkt)
+    {
+        return (((SemanticPacketQueue*)pq_)->pickPacketForECN(pkt));
+    }
 };
 
 static class SemanticRIOClass : public TclClass {
 public:
-	SemanticRIOClass() : TclClass("Queue/RED/RIO/Semantic") {}
-	TclObject* create(int, const char*const*) {
-		return (new SemanticRIOQueue);
-	}
+    SemanticRIOClass()
+        : TclClass("Queue/RED/RIO/Semantic")
+    {
+    }
+    TclObject* create(int, const char* const*)
+    {
+        return (new SemanticRIOQueue);
+    }
 } class_semantic_rio;
-

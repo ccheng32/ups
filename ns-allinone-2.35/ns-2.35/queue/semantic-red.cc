@@ -11,20 +11,28 @@
 
 class SemanticREDQueue : public REDQueue {
 public:
-	SemanticREDQueue() : REDQueue() {}
-	Packet* pickPacketToDrop() {
-		return(((SemanticPacketQueue*) pq_)->pickPacketToDrop());
-	}
-	Packet* pickPacketForECN(Packet *pkt) {
-		return(((SemanticPacketQueue*) pq_)->pickPacketForECN(pkt));
-	}
+    SemanticREDQueue()
+        : REDQueue()
+    {
+    }
+    Packet* pickPacketToDrop()
+    {
+        return (((SemanticPacketQueue*)pq_)->pickPacketToDrop());
+    }
+    Packet* pickPacketForECN(Packet* pkt)
+    {
+        return (((SemanticPacketQueue*)pq_)->pickPacketForECN(pkt));
+    }
 };
 
 static class SemanticREDClass : public TclClass {
 public:
-	SemanticREDClass() : TclClass("Queue/RED/Semantic") {}
-	TclObject* create(int, const char*const*) {
-		return (new SemanticREDQueue);
-	}
+    SemanticREDClass()
+        : TclClass("Queue/RED/Semantic")
+    {
+    }
+    TclObject* create(int, const char* const*)
+    {
+        return (new SemanticREDQueue);
+    }
 } class_semantic_red;
-

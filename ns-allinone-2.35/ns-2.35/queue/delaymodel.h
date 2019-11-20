@@ -1,4 +1,4 @@
-// -*-	Mode:C++; c-basic-offset:8; tab-width:8; indent-tabs-mode:t -*- 
+// -*-	Mode:C++; c-basic-offset:8; tab-width:8; indent-tabs-mode:t -*-
 
 /*
  * Copyright (C) 1997 by the University of Southern California
@@ -56,22 +56,22 @@
 #include "connector.h"
 #include "ranvar.h"
 
-
 class DelayModel : public Connector {
 public:
-	DelayModel();
-	void recv(Packet*, Handler*);
-	inline double txtime(Packet* p) {
-		hdr_cmn *hdr = hdr_cmn::access(p);
-		return bandwidth_ ? (hdr->size() * 8. / bandwidth_) : 0;
-	}
-	double bandwidth() const { return bandwidth_; }
+    DelayModel();
+    void recv(Packet*, Handler*);
+    inline double txtime(Packet* p)
+    {
+        hdr_cmn* hdr = hdr_cmn::access(p);
+        return bandwidth_ ? (hdr->size() * 8. / bandwidth_) : 0;
+    }
+    double bandwidth() const { return bandwidth_; }
 
 protected:
-	int command(int argc, const char*const* argv);
-	RandomVariable* ranvar_;
-	double bandwidth_;	/* bandwidth of underlying link (bits/sec) */
-	//Event intr_;
+    int command(int argc, const char* const* argv);
+    RandomVariable* ranvar_;
+    double bandwidth_; /* bandwidth of underlying link (bits/sec) */
+    //Event intr_;
 };
 
 #endif

@@ -47,31 +47,31 @@
 #ifndef MARKER_H
 #define MARKER_H
 
-#define NO_CLASSES 4	// This number cannot be changed 
-			// w/o modifying the code. 
-			// This is, again, a prototype 
-			// implementation...
-#define	DETERM 1	// Deterministic marker: all traffic is marked with 
-			// given class (marker_class_)
-#define STATIS 2	// Probabilistic marker: class-marking follow given
-			// (cumulative) distribution
+#define NO_CLASSES 4 // This number cannot be changed \
+    // w/o modifying the code.                        \
+    // This is, again, a prototype                    \
+    // implementation...
+#define DETERM 1 // Deterministic marker: all traffic is marked with \
+    // given class (marker_class_)
+#define STATIS 2 // Probabilistic marker: class-marking follow given \
+    // (cumulative) distribution
 
-class Marker: public Queue {
+class Marker : public Queue {
 public:
-	Marker();
-	virtual	int command(int argc, const char*const* argv); 
-	void	enque(Packet*);
-	Packet* deque();
-	double 	marker_arrvs_[NO_CLASSES+1];	// For monitoring purposes
+    Marker();
+    virtual int command(int argc, const char* const* argv);
+    void enque(Packet*);
+    Packet* deque();
+    double marker_arrvs_[NO_CLASSES + 1]; // For monitoring purposes
 protected:
-	int	marker_type_; 			// Marker type 
-	double	marker_frc_[NO_CLASSES+1];	// Class-marking fractions 
-					  	// (STATIS)
-						// marker_frc_ represent the 
-						// *cumulative* marking distribution
-	int 	marker_class_;			// Fixed class marking (DETERM)
-	PacketQueue	*q_;			// Underlying FIFO queue 
-	int	rn_seed_;			// Random seed
+    int marker_type_; // Marker type
+    double marker_frc_[NO_CLASSES + 1]; // Class-marking fractions
+        // (STATIS)
+        // marker_frc_ represent the
+        // *cumulative* marking distribution
+    int marker_class_; // Fixed class marking (DETERM)
+    PacketQueue* q_; // Underlying FIFO queue
+    int rn_seed_; // Random seed
 };
 
 #endif /* MARKER_H */

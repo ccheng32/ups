@@ -33,7 +33,6 @@
  *
  */
 
-
 /*
  * Based on PI controller described in:
  * C. Hollot, V. Misra, D. Towsley and W. Gong. 
@@ -51,13 +50,13 @@
 #include "trace.h"
 #include "timer-handler.h"
 
-#define	DTYPE_NONE	0	/* ok, no drop */
-#define	DTYPE_FORCED	1	/* a "forced" drop */
-#define	DTYPE_UNFORCED	2	/* an "unforced" (random) drop */
+#define DTYPE_NONE 0 /* ok, no drop */
+#define DTYPE_FORCED 1 /* a "forced" drop */
+#define DTYPE_UNFORCED 2 /* an "unforced" (random) drop */
 
 // Insert APPLE specific macro here
 //
-#if defined( __MACH__ ) && defined( __APPLE__ )
+#if defined(__MACH__) && defined(__APPLE__)
 #undef setbit
 #endif
 
@@ -65,77 +64,98 @@
  * Early drop parameters, supplied by user
  */
 struct edp_pi {
-	/*
+    /*
 	 * User supplied.
 	 */
-	int mean_pktsize;	/* avg pkt size, linked into Tcl */
-	int bytes;		/* true if queue in bytes, false if packets */
-	int setbit;		/* true to set congestion indication bit */
-	double a, b;		 /* parameters to pi controller */
-	double w;				/* sampling frequency (# of times per second) */ 
-	double qref;		/* desired queue size */
-	edp_pi(): mean_pktsize(0), bytes(0), setbit(0), a(0.0), b(0.0), w(0.0), qref(0.0) { }
+    int mean_pktsize; /* avg pkt size, linked into Tcl */
+    int bytes; /* true if queue in bytes, false if packets */
+    int setbit; /* true to set congestion indication bit */
+    double a, b; /* parameters to pi controller */
+    double w; /* sampling frequency (# of times per second) */
+    double qref; /* desired queue size */
+    edp_pi()
+        : mean_pktsize(0)
+        , bytes(0)
+        , setbit(0)
+        , a(0.0)
+        , b(0.0)
+        , w(0.0)
+        , qref(0.0)
+    {
+    }
 };
 
 /*
  * Early drop variables, maintained by PI
  */
 struct edv_pi {
-	TracedDouble v_prob;	/* prob. of packet drop before "count". */
-	int count;		/* # of packets since last drop */
-	int count_bytes;	/* # of bytes since last drop */
-	int qold;
-	edv_pi() : v_prob(0.0), count(0), count_bytes(0), qold(0) { }
+    TracedDouble v_prob; /* prob. of packet drop before "count". */
+    int count; /* # of packets since last drop */
+    int count_bytes; /* # of bytes since last drop */
+    int qold;
+    edv_pi()
+        : v_prob(0.0)
+        , count(0)
+        , count_bytes(0)
+        , qold(0)
+    {
+    }
 };
 
 class LinkDelay;
-class PIQueue ; 
+class PIQueue;
 
 class PICalcTimer : public TimerHandler {
 public:
-		PICalcTimer(PIQueue *a) : TimerHandler() { a_ = a; }
-		virtual void expire(Event *e);
+    PICalcTimer(PIQueue* a)
+        : TimerHandler()
+    {
+        a_ = a;
+    }
+    virtual void expire(Event* e);
+
 protected:
-		PIQueue *a_;
+    PIQueue* a_;
 };
 
 class PIQueue : public Queue {
- 
- friend class PICalcTimer;
- public:	
-	PIQueue(const char * = "Drop");
- protected:
-	int command(int argc, const char*const* argv);
-	void enque(Packet* pkt);
-	virtual Packet *pickPacketForECN(Packet* pkt);
-	virtual Packet *pickPacketToDrop();
-	Packet* deque();
-	void reset();
-	int drop_early(Packet* pkt, int qlen);
- 	double calculate_p();
-	PICalcTimer CalcTimer;
 
-	LinkDelay* link_;	/* outgoing link */
-	int fifo_;		/* fifo queue? */
-	PacketQueue *q_; 	/* underlying (usually) FIFO queue */
-		
-	int qib_;	/* bool: queue measured in bytes? */
-	NsObject* de_drop_;	/* drop_early target */
+    friend class PICalcTimer;
 
-	//added to be able to trace EDrop Objects - ratul
-	//the other events - forced drop, enque and deque are traced by a different mechanism.
-	NsObject * EDTrace;    //early drop trace
-	char traceType[20];    //the preferred type for early drop trace. 
-	                       //better be less than 19 chars long
-	Tcl_Channel tchan_;	/* place to write trace records */
-	TracedInt curq_;	/* current qlen seen by arrivals */
-	void trace(TracedVar*);	/* routine to write trace records */
+public:
+    PIQueue(const char* = "Drop");
 
-	edp_pi edp_;	/* early-drop params */
-	edv_pi edv_;		/* early-drop variables */
+protected:
+    int command(int argc, const char* const* argv);
+    void enque(Packet* pkt);
+    virtual Packet* pickPacketForECN(Packet* pkt);
+    virtual Packet* pickPacketToDrop();
+    Packet* deque();
+    void reset();
+    int drop_early(Packet* pkt, int qlen);
+    double calculate_p();
+    PICalcTimer CalcTimer;
 
-	int first_reset_;       /* first time reset() is called */
+    LinkDelay* link_; /* outgoing link */
+    int fifo_; /* fifo queue? */
+    PacketQueue* q_; /* underlying (usually) FIFO queue */
 
+    int qib_; /* bool: queue measured in bytes? */
+    NsObject* de_drop_; /* drop_early target */
+
+    //added to be able to trace EDrop Objects - ratul
+    //the other events - forced drop, enque and deque are traced by a different mechanism.
+    NsObject* EDTrace; //early drop trace
+    char traceType[20]; //the preferred type for early drop trace.
+        //better be less than 19 chars long
+    Tcl_Channel tchan_; /* place to write trace records */
+    TracedInt curq_; /* current qlen seen by arrivals */
+    void trace(TracedVar*); /* routine to write trace records */
+
+    edp_pi edp_; /* early-drop params */
+    edv_pi edv_; /* early-drop variables */
+
+    int first_reset_; /* first time reset() is called */
 };
 
 #endif

@@ -48,33 +48,33 @@
 #ifndef DEMARKER_H
 #define DEMARKER_H
 
-#define START_STATISTICS 0.0	// When do we start writing the delays? (sec)
-#define NO_CLASSES 	4	// This number cannot be changed 
-				// w/o modifying the code. 
-				// This is, again, a prototype 
-				// implementation...
-#define VERBOSE	1		// Write e2e delay of packet in trace file 
-				// (per class)
-#define QUIET	2		// Do not do anything basically
+#define START_STATISTICS 0.0 // When do we start writing the delays? (sec)
+#define NO_CLASSES 4 // This number cannot be changed \
+    // w/o modifying the code.                        \
+    // This is, again, a prototype                    \
+    // implementation...
+#define VERBOSE 1 // Write e2e delay of packet in trace file \
+    // (per class)
+#define QUIET 2 // Do not do anything basically
 
-
-class Demarker: public Queue {
+class Demarker : public Queue {
 public:
-	Demarker();
-	virtual int command(int argc, const char*const* argv); 
-	void 	enque(Packet*);
-	Packet* deque();
-	double  demarker_arrvs_[NO_CLASSES+1];
+    Demarker();
+    virtual int command(int argc, const char* const* argv);
+    void enque(Packet*);
+    Packet* deque();
+    double demarker_arrvs_[NO_CLASSES + 1];
+
 protected:
-	int 	demarker_type_;		// Demarker Type
-	PacketQueue	*q_;		// Underlying FIFO queue 
-	FILE*	delay_tr_[NO_CLASSES+1];// Delay trace per class
-	char*	file_name_;		// Trace filename
+    int demarker_type_; // Demarker Type
+    PacketQueue* q_; // Underlying FIFO queue
+    FILE* delay_tr_[NO_CLASSES + 1]; // Delay trace per class
+    char* file_name_; // Trace filename
 private:
-	int link_id_;
-	double arrived_Bits_[NO_CLASSES+1];
-	double monitoring_window_;
-	double last_monitor_update_;
+    int link_id_;
+    double arrived_Bits_[NO_CLASSES + 1];
+    double monitoring_window_;
+    double last_monitor_update_;
 };
 
 #endif /* DEMARKER_H */

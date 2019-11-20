@@ -57,33 +57,35 @@
 
 #define MAXBINS 1024
 
-
 // we need a multi-valued return and C doesn't help
-struct dodequeResult { Packet* p; int ok_to_drop; };
+struct dodequeResult {
+    Packet* p;
+    int ok_to_drop;
+};
 
-    struct bindesc {
-        PacketQueue *q_;        // underlying FIFO queue
-	int index;
-        // Dynamic state used by algorithm
-        double first_above_time_; // when we went (or will go) continuously above
-                                  // target for interval
-        double drop_next_;      // time to drop next packet (or when  dropped last)
-        int count_;             // how many drops we've done since the last time
-                            // we entered dropping state.
-        int dropping_;          // = 1 if in dropping state.
-	int deficit_;		// for rounding on bytes
+struct bindesc {
+    PacketQueue* q_; // underlying FIFO queue
+    int index;
+    // Dynamic state used by algorithm
+    double first_above_time_; // when we went (or will go) continuously above
+        // target for interval
+    double drop_next_; // time to drop next packet (or when  dropped last)
+    int count_; // how many drops we've done since the last time
+        // we entered dropping state.
+    int dropping_; // = 1 if in dropping state.
+    int deficit_; // for rounding on bytes
 
-        int newflag;
-	int on_sched_;
-        bindesc* prev;
-        bindesc* next;
-    } ;
+    int newflag;
+    int on_sched_;
+    bindesc* prev;
+    bindesc* next;
+};
 
 class sfqCoDelQueue : public Queue {
-  public:   
+public:
     sfqCoDelQueue();
 
-/* The following lines were added by CableLabs for their purposes but
+    /* The following lines were added by CableLabs for their purposes but
  * require other changes to ns-2 so are commented out for general use
          //adding a length() method to allow for length queries - JRP
     virtual int length() { return curlen_;}  // return number of pkts currently in
@@ -93,46 +95,45 @@ class sfqCoDelQueue : public Queue {
                          // currently in all bins
 */
 
-
-  protected:
+protected:
     // Stuff specific to the CoDel algorithm
     void enque(Packet* pkt);
     Packet* deque();
 
     bindesc bin_[MAXBINS];
     bindesc* binsched_;
-//use these when call dodeque
+    //use these when call dodeque
     double first_above_time_;
-    double drop_next_; 
+    double drop_next_;
     int count_;
     int dropping_;
 
     // Static state (user supplied parameters)
-    double target_;         // target queue size (in time, same units as clock)
-    double interval_;       // width of moving time window over which to compute min
+    double target_; // target queue size (in time, same units as clock)
+    double interval_; // width of moving time window over which to compute min
 
-    int maxpacket_;         // largest packet we've seen so far (this should be
-                            // the link's MTU but that's not available in NS)
-int mtu_max_;
-    int curlen_;	    // the total occupancy of all bins in packets
-    int maxbinid_;	    // id of bin with the most pkts
-    int maxbins_;	    // for tcl override of MAXBINS (can only make smaller)
-    int quantum_;	    // for rounding by bytes - set to 1510 in tcl file
-    int isolate_;	    // for isolating cbrs. To isolate, set to 1, default 0
+    int maxpacket_; // largest packet we've seen so far (this should be
+        // the link's MTU but that's not available in NS)
+    int mtu_max_;
+    int curlen_; // the total occupancy of all bins in packets
+    int maxbinid_; // id of bin with the most pkts
+    int maxbins_; // for tcl override of MAXBINS (can only make smaller)
+    int quantum_; // for rounding by bytes - set to 1510 in tcl file
+    int isolate_; // for isolating cbrs. To isolate, set to 1, default 0
 
     int control_packets_;
     int sourcedest_fq_;
 
     // NS-specific junk
-    int command(int argc, const char*const* argv);
+    int command(int argc, const char* const* argv);
     void reset();
     void trace(TracedVar*); // routine to write trace records
 
-    Tcl_Channel tchan_;     // place to write trace records
-    TracedInt curq_;        // current qlen in bytes seen by arrivals
-    TracedDouble d_exp_;    // delay seen by most recently dequeued packet
+    Tcl_Channel tchan_; // place to write trace records
+    TracedInt curq_; // current qlen in bytes seen by arrivals
+    TracedDouble d_exp_; // delay seen by most recently dequeued packet
 
-  private:
+private:
     double control_law(double);
     dodequeResult dodeque(PacketQueue*);
     unsigned int hash(Packet*);

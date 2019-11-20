@@ -53,76 +53,75 @@ class AckReconsController;
  * TCP semantics) of packets.
  */
 class SemanticPacketQueue : public PacketQueue {
-  public:
-	SemanticPacketQueue();
-	int command(int argc, const char*const* argv);
-	/* deque TCP acks before any other type of packet */
-	Packet* deque_acksfirst();
-	/* determine whether two packets belong to the same connection */
-	inline int compareFlows(hdr_ip *ip1, hdr_ip *ip2) {
-		return ((ip1->saddr() == ip2->saddr()) &&
-			(ip1->sport() == ip2->sport()) &&
-			(ip1->daddr() == ip2->daddr()) && 
-			(ip1->dport() == ip2->dport())); 
-	}
-	/*
+public:
+    SemanticPacketQueue();
+    int command(int argc, const char* const* argv);
+    /* deque TCP acks before any other type of packet */
+    Packet* deque_acksfirst();
+    /* determine whether two packets belong to the same connection */
+    inline int compareFlows(hdr_ip* ip1, hdr_ip* ip2)
+    {
+        return ((ip1->saddr() == ip2->saddr()) && (ip1->sport() == ip2->sport()) && (ip1->daddr() == ip2->daddr()) && (ip1->dport() == ip2->dport()));
+    }
+    /*
 	 * When a new ack is enqued, purge older acks (as determined by the 
 	 * sequence number of the ack field) from the queue. The enqued ack
 	 * remains at the tail of the queue, unless replace_head is true, in 
 	 * which case the new ack takes the place of the old ack closest to
 	 * the head of the queue.
 	 */
-	void filterAcks(Packet *pkt, int replace_head); 
+    void filterAcks(Packet* pkt, int replace_head);
 
-	/* check whether packet is marked */
-	int isMarked(Packet *p);
-	/* pick out the index'th packet of the right kind (marked/unmarked) */
-	Packet *lookup(int index, int markedFlag);
-	/* pick packet for ECN notification (either marking or dropping) */
-	Packet *pickPacketForECN(Packet *pkt);
-	/* pick a packet to drop when the queue is full */
-	Packet *pickPacketToDrop();
+    /* check whether packet is marked */
+    int isMarked(Packet* p);
+    /* pick out the index'th packet of the right kind (marked/unmarked) */
+    Packet* lookup(int index, int markedFlag);
+    /* pick packet for ECN notification (either marking or dropping) */
+    Packet* pickPacketForECN(Packet* pkt);
+    /* pick a packet to drop when the queue is full */
+    Packet* pickPacketToDrop();
 
-	/* 
+    /* 
 	 * Remove a specific packet given pointers to it and its predecessor
 	 * in the queue. p and/or pp may be NULL.
 	 */
-	void remove(Packet* p, Packet* pp);
+    void remove(Packet* p, Packet* pp);
 
-	inline Packet* head() { return head_; }
+    inline Packet* head() { return head_; }
 
-	/* count of packets of various types */
-	int ack_count;		/* number of TCP acks in the queue */
-	int data_count;		/* number of non-ack packets in the queue */
-	int acks_to_send;	/* number of ack to send in current schedule */
-	int marked_count_;	/* number of marked packets */
-	int unmarked_count_;	/* number of unmarked packets */
+    /* count of packets of various types */
+    int ack_count; /* number of TCP acks in the queue */
+    int data_count; /* number of non-ack packets in the queue */
+    int acks_to_send; /* number of ack to send in current schedule */
+    int marked_count_; /* number of marked packets */
+    int unmarked_count_; /* number of unmarked packets */
 
-	/* 
+    /* 
 	 * These indicator variables are bound in derived objects and
 	 * define queueing/scheduling polcies.
 	 */
-	int acksfirst_;		/* deque TCP acks before any other data */
-	int filteracks_;	/* purge old acks when new one arrives */
-	int reconsAcks_;	/* set up queue as an ack recontructor */
-	int replace_head_;	/* new ack should take the place of old ack
+    int acksfirst_; /* deque TCP acks before any other data */
+    int filteracks_; /* purge old acks when new one arrives */
+    int reconsAcks_; /* set up queue as an ack recontructor */
+    int replace_head_; /* new ack should take the place of old ack
 				   closest to the head */
-	int priority_drop_;	/* drop marked (low priority) packets first */
-	int random_drop_;	/* pick packet to drop at random */
-	int random_ecn_;	/* pick packet for ECN at random */
-	virtual Packet* deque();
-	Packet* enque(Packet *); // Returns prev tail
-	virtual inline void enque_head(Packet *p) {
-		if (len_ == 0)
-			PacketQueue::enque(p);
-		else {
-			p->next_ = head_;
-			head_ = p;
-			++len_;
-		}
-	}
-	virtual void remove(Packet *);
-	AckReconsController *reconsCtrl_;
+    int priority_drop_; /* drop marked (low priority) packets first */
+    int random_drop_; /* pick packet to drop at random */
+    int random_ecn_; /* pick packet for ECN at random */
+    virtual Packet* deque();
+    Packet* enque(Packet*); // Returns prev tail
+    virtual inline void enque_head(Packet* p)
+    {
+        if (len_ == 0)
+            PacketQueue::enque(p);
+        else {
+            p->next_ = head_;
+            head_ = p;
+            ++len_;
+        }
+    }
+    virtual void remove(Packet*);
+    AckReconsController* reconsCtrl_;
 };
 
 #endif
