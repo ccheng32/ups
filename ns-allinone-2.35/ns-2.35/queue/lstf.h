@@ -33,10 +33,16 @@ protected:
     double txtime(Packet* p);
     Packet* deque();
 
-    bindesc bin_[1 + LSTF_NUM_QUEUES];
-    long int q_bounds_[1 + LSTF_NUM_QUEUES];
+    // 8 queues.
+    bindesc bin_[1 + LSTF_NUM_QUEUES];          // the actual queues
+    long int q_bounds_[1 + LSTF_NUM_QUEUES];    // queue bounds
+    long int q_max_[1 + LSTF_NUM_QUEUES];       // max capacity of each queue
+    long int q_curlen_[1 + LSTF_NUM_QUEUES];    // number of packets in each queue
+    long int q_curq_[1 + LSTF_NUM_QUEUES];      // number of bytes in each queue
 
-    int curlen_; // the total occupancy of all bins in packets
+    int curlen_;                                // the total occupancy of all bins in packets
+    TracedInt curq_;                            // current qlen in bytes seen by arrivals
+
     int debug_;
     int queueid_;
 
@@ -51,7 +57,7 @@ protected:
     double bandwidth_;
 
     Tcl_Channel tchan_; // place to write trace records
-    TracedInt curq_; // current qlen in bytes seen by arrivals
+    
 };
 
 #endif

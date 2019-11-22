@@ -35,15 +35,34 @@ LstfQueue::LstfQueue()
     bind("control_packets_", &control_packets_);
     bind("control_packets_time_", &control_packets_time_);
     bind("bandwidth_", &bandwidth_);
-    char name[100];
-    for (int i = 0; i < LSTF_NUM_QUEUES; i++) {
-        sprintf(name, "queue_bounds_%d", i);
-        bind(name, &q_bounds_[i + 1]);
-    }
 
+    // initialize queues
     for (int i = 0; i <= LSTF_NUM_QUEUES; i++) {
         bin_[i].q_ = new PacketQueue();
         bin_[i].index = i;
+    }
+
+    // q_bounds bindings.
+    char name[100];
+    for (int i = 1; i <= LSTF_NUM_QUEUES; i++) {
+        sprintf(name, "q_bounds_%d", i);
+        bind(name, &q_bounds_[i]);
+    }
+
+    // q_max bindings. 
+    for (int i = 1; i <= LSTF_NUM_QUEUES; i++) {
+        sprintf(name, "q_max_%d", i);
+        bind(name, &q_max_[i]);
+    }
+
+    // initialize q_curlen_.
+    for (int i = 0; i <= LSTF_NUM_QUEUES; i++) {
+        q_curlen_[i] = 0;
+    }
+        
+    // initialize q_curq_.
+    for (int i = 0; i <= LSTF_NUM_QUEUES; i++) {
+        q_curq_[i] = 0;
     }
 
     pq_ = bin_[1].q_; //does ns need this?
@@ -66,37 +85,42 @@ double LstfQueue::txtime(Packet* p)
 // Add a new packet to the queue. If the entire buffer space is full, drop highest slack packet
 void LstfQueue::enque(Packet* pkt)
 {
+    // Get slack value of incoming packet.
     hdr_ip* iph = hdr_ip::access(pkt);
     int seqNo = getSeqNo(pkt);
-    long long int curSlack = iph->prio() + (long long int)(txtime(pkt) * kTime_);
+    long long int curSlack = iph->prio() + (long long int)(txtime(pkt) * kTime_);  
 
-    // Drop a packet from the lowest priority queue if the buffer is full.
-    if (curlen_ >= qlim_) {
-        for (int i = LSTF_NUM_QUEUES; i >= 1; i--) {
-            if (curSlack > q_bounds_[i]) {
-                drop(pkt);
-                return;
-            }
-            if ((bin_[i].q_)->length() == 0)
-                continue;
-            Packet* tail_pkt = (bin_[i].q_)->tail();
-            (bin_[i].q_)->remove(tail_pkt);
-            curq_ -= HDR_CMN(tail_pkt)->size();
-            curlen_--;
-            drop(tail_pkt);
-        }
+    // Find queue to which packet belongs.
+    int i = 1;
+    while (i < LSTF_NUM_QUEUES && q_bounds_[i] < curSlack) i++;
+
+    // Drop a packet from the queue if the buffer is full. 
+    if (q_curlen_[i] >= q_max_[i]){
+         Packet* tail_pkt = (bin_[i].q_)->tail();
+         (bin_[i].q_)->remove(tail_pkt);
+
+         curq_ -= HDR_CMN(tail_pkt)->size();
+         curlen_--;
+         
+         q_curq_[i] -= HDR_CMN(tail_pkt)->size();
+         q_curlen_[i]--;
+
+         drop(tail_pkt);
     }
-    curlen_++;
-    curq_ += HDR_CMN(pkt)->size();
 
+    curq_ += HDR_CMN(pkt)->size();
+    curlen_++;
+     
     //A hack to ensure same route construction when ECMP is enabled
     if ((HDR_CMN(pkt)->size() >= 1460) || (!control_packets_) || (Scheduler::instance().clock() >= double(control_packets_time_))) {
 
-        HDR_CMN(pkt)->ts_ = Scheduler::instance().clock();
-        for (int i = 1; i <= LSTF_NUM_QUEUES; i++) {
-            if (curSlack < q_bounds_[i])
-                (bin_[i].q_)->enque(pkt);
-        }
+        HDR_CMN(pkt)->ts_ = Scheduler::instance().clock(); 
+
+        // Enqueue packet into queue.
+        (bin_[i].q_)->enque(pkt);
+
+        q_curq_[i] += HDR_CMN(pkt)->size();
+        q_curlen_[i]++;
 
         if (debug_)
             printf("%lf: Lstf: QueueID %d: Enqueuing packet from flow with id %d, seqno = %d, size = %d and slack = %lld \n", Scheduler::instance().clock(), queueid_, iph->flowid(), seqNo, HDR_CMN(pkt)->size(), iph->prio());
@@ -125,6 +149,7 @@ Packet* LstfQueue::deque()
                 printf("%lf: Lstf: QueueID %d: Dequing packet from flow with id %d, slack %lld, seqno = %d, size = %d from control queue\n", Scheduler::instance().clock(), queueid_, iph->flowid(), iph->prio(), seqNo, HDR_CMN(pkt)->size());
             return pkt;
         }
+        // Else check normal queues.
         for (int i = 1; i <= LSTF_NUM_QUEUES; i++) {
             if ((bin_[i].q_)->length() > 0) {
                 //if control queue empty, work on data queue
@@ -132,8 +157,12 @@ Packet* LstfQueue::deque()
                 pkt = (bin_[i].q_)->deque();
                 int seqNo = getSeqNo(pkt);
                 hdr_ip* iph = hdr_ip::access(pkt);
+
                 curlen_--;
                 curq_ -= HDR_CMN(pkt)->size();
+
+                q_curlen_[i]--;
+                q_curq_[i] -= HDR_CMN(pkt)->size();
 
                 long long int wait_time = (Scheduler::instance().clock() * kTime_) - (long long int)(HDR_CMN(pkt)->ts_ * kTime_);
                 long long int new_slack = iph->prio() - wait_time;
