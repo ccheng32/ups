@@ -42,28 +42,34 @@ LstfQueue::LstfQueue()
         bin_[i].index = i;
     }
 
-    // q_bounds bindings.
-    char name[100];
-    for (int i = 1; i <= LSTF_NUM_QUEUES; i++) {
-        sprintf(name, "q_bounds_%d", i);
-        bind(name, &q_bounds_[i]);
-    }
+    // q_bounds bindings. 
+    bind("q_bounds_1", &q_bounds_[1]);
+    bind("q_bounds_2", &q_bounds_[2]);
+    bind("q_bounds_3", &q_bounds_[3]);
+    bind("q_bounds_4", &q_bounds_[4]);
+    bind("q_bounds_5", &q_bounds_[5]);
+    bind("q_bounds_6", &q_bounds_[6]);
+    bind("q_bounds_7", &q_bounds_[7]);
 
-    // q_max bindings. 
-    for (int i = 1; i <= LSTF_NUM_QUEUES; i++) {
-        sprintf(name, "q_max_%d", i);
-        bind(name, &q_max_[i]);
-    }
+    // q_max bindings.  
+    bind("q_max_1", &q_max_[1]);
+    bind("q_max_2", &q_max_[2]);
+    bind("q_max_3", &q_max_[3]);
+    bind("q_max_4", &q_max_[4]);
+    bind("q_max_5", &q_max_[5]);
+    bind("q_max_6", &q_max_[6]);
+    bind("q_max_7", &q_max_[7]);
+    bind("q_max_8", &q_max_[8]);
 
     // initialize q_curlen_.
-    for (int i = 0; i <= LSTF_NUM_QUEUES; i++) {
+    for (int i = 1; i <= LSTF_NUM_QUEUES; i++) {
         q_curlen_[i] = 0;
-    }
+    } 
         
     // initialize q_curq_.
-    for (int i = 0; i <= LSTF_NUM_QUEUES; i++) {
+    for (int i = 1; i <= LSTF_NUM_QUEUES; i++) {
         q_curq_[i] = 0;
-    }
+    } 
 
     pq_ = bin_[1].q_; //does ns need this?
     reset();

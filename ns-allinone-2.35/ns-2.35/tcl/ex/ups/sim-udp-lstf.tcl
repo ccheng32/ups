@@ -179,6 +179,22 @@ if { [info exists opt(kTime)] } {
   Queue/Lstf set kTime_ $opt(kTime)
 } 
 
+Queue/Lstf set q_bounds_1 125000000
+Queue/Lstf set q_bounds_2 250000000
+Queue/Lstf set q_bounds_3 375000000
+Queue/Lstf set q_bounds_4 500000000
+Queue/Lstf set q_bounds_5 625000000
+Queue/Lstf set q_bounds_6 750000000
+Queue/Lstf set q_bounds_7 825000000
+
+Queue/Lstf set q_max_1 100000000
+Queue/Lstf set q_max_2 100000000
+Queue/Lstf set q_max_3 100000000
+Queue/Lstf set q_max_4 100000000
+Queue/Lstf set q_max_5 100000000
+Queue/Lstf set q_max_6 100000000
+Queue/Lstf set q_max_7 100000000
+
 create-topology $opt(topofolder)
 create-sources-sinks "$opt(topofolder)/$opt(workloadfile)"
 
