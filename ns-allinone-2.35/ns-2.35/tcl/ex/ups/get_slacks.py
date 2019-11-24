@@ -21,6 +21,7 @@ import sys
 # ratio format
 # Format: <flowid> <seq in no. of packets> : <PCT with LSTF> <original PCT> <Ratio of the two PCTs> <Relative difference between the two PCTs>
 
+# t_min[(src,dst)] is minimum time from src to dst in ns.
 def get_t_min(init_pcts, t_min):
 
   for line in init_pcts:
@@ -28,6 +29,7 @@ def get_t_min(init_pcts, t_min):
     t_min[(words[1],words[2])] = long(words[0])
 
 
+# deadlines[(src,dst,flow,seqnum)] = slack for packet seqnum in flow from src to dst.
 def get_deadlines(sched_pcts, t_min, deadlines):
   for line in sched_pcts:
     words = line.split()
@@ -36,13 +38,17 @@ def get_deadlines(sched_pcts, t_min, deadlines):
 
 
 if __name__ == "__main__":
+
+  # open input and output files
   init_pcts = open(sys.argv[1]).readlines()
   sched_pcts = open(sys.argv[2]).readlines()
   outfile = open(sys.argv[3], "w")
 
+  # t_min[(src,dst)] is minimum time from src to dst in ns.
   t_min = dict()
   get_t_min(init_pcts, t_min)
 
+  # deadlines[(src,dst,flow,seqnum)] = slack for packet seqnum in flow from src to dst.
   deadlines = dict()
   get_deadlines(sched_pcts, t_min, deadlines)
 

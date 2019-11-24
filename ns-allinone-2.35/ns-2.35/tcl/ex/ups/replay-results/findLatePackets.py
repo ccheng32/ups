@@ -21,7 +21,7 @@ import sys
 # ratio format
 # Format: <flowid> <seq in no. of packets> : <PCT with LSTF> <original PCT> <Ratio of the two PCTs> <Relative difference between the two PCTs>
 
-lines = open(sys.argv[1]).readlines()
+lines = open(sys.argv[1]).readlines()                                           # .compare file
 max_trans_time = long(sys.argv[2])
 
 delay = dict()
@@ -34,9 +34,9 @@ not_reached = 0
 for line in lines[:-1]:
   try:
     words = line.split()
-    diff = long(words[8])
+    diff = long(words[8])                                                       # difference between lstf and orig pct
     if(diff in delay.keys()):
-      delay[diff].append((words[0], int(long(words[3])/1000000), words[6]))
+      delay[diff].append((words[0], int(long(words[3])/1000000), words[6]))     # (flowid, congestion free pct, orig pct)
     else:
       delay[diff] = list()
       delay[diff].append((words[0], int(long(words[3])/1000000), words[6]))
