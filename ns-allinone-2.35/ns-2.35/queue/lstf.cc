@@ -1,5 +1,9 @@
 /* LSTF: Author - Radhika Mittal, UC Berkeley, radhika@eecs.berkeley.edu */
 
+# define ASSERT_WITH_MESSAGE(condition, message) do { \
+if (!(condition)) { printf((message)); } \
+assert ((condition)); } while(false)
+
 #include <math.h>
 #include <sys/types.h>
 #include "config.h"
@@ -117,6 +121,7 @@ void LstfQueue::enque(Packet* pkt)
     // Find queue to which packet belongs.
     int i = 1;
     while (i < LSTF_NUM_QUEUES && q_bounds_[i] < curSlack) i++;
+    assert(1 <= i && i <= LSTF_NUM_QUEUES);
 
     // Drop a packet from the queue if the buffer is full. 
     if (q_curlen_[i] >= q_max_[i]){
@@ -146,7 +151,7 @@ void LstfQueue::enque(Packet* pkt)
         q_curq_[i] += HDR_CMN(pkt)->size();
         q_curlen_[i]++;
 
-        printf("%lf: Lstf: QueueID %d: Enqueuing packet from flow with id %d, seqno = %d, size = %d and slack = %lld into %d th queue\n", Scheduler::instance().clock(), queueid_, iph->flowid(), seqNo, HDR_CMN(pkt)->size(), iph->prio(), i);
+        fprintf(stderr, "%lf: Lstf: QueueID %d: Enqueuing packet from flow with id %d, seqno = %d, size = %d and slack = %lld into %d th queue\n", Scheduler::instance().clock(), queueid_, iph->flowid(), seqNo, HDR_CMN(pkt)->size(), iph->prio(), i);
 
         if (debug_)
             printf("%lf: Lstf: QueueID %d: Enqueuing packet from flow with id %d, seqno = %d, size = %d and slack = %lld \n", Scheduler::instance().clock(), queueid_, iph->flowid(), seqNo, HDR_CMN(pkt)->size(), iph->prio());
@@ -194,6 +199,8 @@ Packet* LstfQueue::deque()
                 long long int new_slack = iph->prio() - wait_time;
 
                 iph->prio() = new_slack;
+
+                fprintf(stderr, "%lf: Lstf: QueueID %d: Dequing packet from flow with id %d, slack %lld, seqno = %d, size = %d, from queue %d\n", Scheduler::instance().clock(), queueid_, iph->flowid(), iph->prio(), seqNo, HDR_CMN(pkt)->size(), i);
 
                 if (debug_)
                     printf("%lf: Lstf: QueueID %d: Dequing packet from flow with id %d, slack %lld, seqno = %d, size = %d \n", Scheduler::instance().clock(), queueid_, iph->flowid(), iph->prio(), seqNo, HDR_CMN(pkt)->size());
