@@ -51,7 +51,8 @@ LstfQueue::LstfQueue()
     //bind("q_bounds_6", &q_bounds_[6]);
     //bind("q_bounds_7", &q_bounds_[7]);
 
-    q_bounds_[1] = 125000000;
+    // Try FIFO FIRST
+    q_bounds_[1] = 1000000000;
     q_bounds_[2] = 250000000;
     q_bounds_[3] = 375000000;
     q_bounds_[4] = 500000000;
@@ -116,6 +117,7 @@ void LstfQueue::enque(Packet* pkt)
     // Find queue to which packet belongs.
     int i = 1;
     while (i < LSTF_NUM_QUEUES && q_bounds_[i] < curSlack) i++;
+    printf('Packet')
 
     // Drop a packet from the queue if the buffer is full. 
     if (q_curlen_[i] >= q_max_[i]){
@@ -144,6 +146,8 @@ void LstfQueue::enque(Packet* pkt)
 
         q_curq_[i] += HDR_CMN(pkt)->size();
         q_curlen_[i]++;
+
+        printf("%lf: Lstf: QueueID %d: Enqueuing packet from flow with id %d, seqno = %d, size = %d and slack = %lld into %d th queue\n", Scheduler::instance().clock(), queueid_, iph->flowid(), seqNo, HDR_CMN(pkt)->size(), iph->prio(), i);
 
         if (debug_)
             printf("%lf: Lstf: QueueID %d: Enqueuing packet from flow with id %d, seqno = %d, size = %d and slack = %lld \n", Scheduler::instance().clock(), queueid_, iph->flowid(), seqNo, HDR_CMN(pkt)->size(), iph->prio());
