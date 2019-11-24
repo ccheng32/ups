@@ -1,5 +1,26 @@
 import sys
 
+# What the fuck is this file?
+# Takes a .compare file, max_trans_time number (default 11680), and outputs late-packets file.
+
+# arg format
+# 1 is the .compare file, 2 is the max_trans_time number (default is 11680).
+
+# pct format
+# Format: <PCT in nanoseconds> <source id> <dest id> <flow id> <seq in no.of packets> <time when packet reaches dest in sec> <time when packet reaches dest in nanoseconds>
+
+# fct format
+# Format: <FCT in nanoseconds> <source id> <dest id> <flow id> <no. of packets in flow - 1> <time when flow finishes in sec>
+
+# slacks format
+# Format: <source id> <dest id> <flow id> <seq num in flow> <slack value>
+
+# compare format
+# Format: <flowid> <seq in no. of packets> : <congestion free PCT> <PCT with LSTF> >  <original PCT> by <Difference between the two PCTs>
+
+# ratio format
+# Format: <flowid> <seq in no. of packets> : <PCT with LSTF> <original PCT> <Ratio of the two PCTs> <Relative difference between the two PCTs>
+
 lines = open(sys.argv[1]).readlines()
 max_trans_time = long(sys.argv[2])
 
@@ -27,7 +48,7 @@ for line in lines[:-1]:
 #for key in sorted(delay.keys()):
 #  if(key > 116800):
 #	  print str(key) + " : " + str(delay[key])
-        
+
 print "***************************"
 
 
@@ -91,7 +112,7 @@ for key in sorted(delay.keys()):
         buckets[bucketid]["Base Time"][x[1]] = 1
      else:
         buckets[bucketid]["Base Time"][x[1]] = buckets[bucketid]["Base Time"][x[1]] + 1
-     
+
      slack_ms = int(float(x[2]) / 1000000)
      if (slack_ms not in buckets[bucketid]["Slack(ms)"].keys()):
          buckets[bucketid]["Slack(ms)"][slack_ms] = 1
@@ -107,11 +128,11 @@ for key in buckets.keys():
       if (key2 == "Flows"):
         print "Num of Flows: " + str(len(buckets[key][key2]))
       else:
-        print str(key2) + ": " + str(buckets[key][key2]) 
+        print str(key2) + ": " + str(buckets[key][key2])
 
 
 print "***************************"
-print "Number of packets not finished: " + str(not_reached) 
-print "Flows Delayed " + str(len(flows)) + " = " + str(float(len(flows))*100/float(total_flows)) + "%" 
+print "Number of packets not finished: " + str(not_reached)
+print "Flows Delayed " + str(len(flows)) + " = " + str(float(len(flows))*100/float(total_flows)) + "%"
 print "Total Packets Delayed " + str(total_delayed) + " = " + str(float(total_delayed)*100/float(total)) + "%"
 print "***************************"

@@ -1,10 +1,31 @@
 import sys
 
+# What the fuck is this file?
+# Takes init pcts, original pcts, and outputs slack values.
+
+# arg format
+# 1 is init pcts, 2 is original pcts, 3 is .slacks output
+
+# pct format
+# Format: <PCT in nanoseconds> <source id> <dest id> <flow id> <seq in no.of packets> <time when packet reaches dest in sec> <time when packet reaches dest in nanoseconds>
+
+# fct format
+# Format: <FCT in nanoseconds> <source id> <dest id> <flow id> <no. of packets in flow - 1> <time when flow finishes in sec>
+
+# slacks format
+# Format: <source id> <dest id> <flow id> <seq num in flow> <slack value>
+
+# compare format
+# Format: <flowid> <seq in no. of packets> : <congestion free PCT> <PCT with LSTF> >  <original PCT> by <Difference between the two PCTs>
+
+# ratio format
+# Format: <flowid> <seq in no. of packets> : <PCT with LSTF> <original PCT> <Ratio of the two PCTs> <Relative difference between the two PCTs>
+
 def get_t_min(init_pcts, t_min):
 
   for line in init_pcts:
     words = line.split()
-    t_min[(words[1],words[2])] = long(words[0]) 
+    t_min[(words[1],words[2])] = long(words[0])
 
 
 def get_deadlines(sched_pcts, t_min, deadlines):
@@ -24,7 +45,7 @@ if __name__ == "__main__":
 
   deadlines = dict()
   get_deadlines(sched_pcts, t_min, deadlines)
-  
+
   for key in deadlines.keys():
     outfile.write(key[0] + " " + key[1] + " " + key[2] + " " + key[3] + " " + str(deadlines[key]) + "\n")
-    
+
