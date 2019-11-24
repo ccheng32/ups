@@ -117,7 +117,6 @@ void LstfQueue::enque(Packet* pkt)
     // Find queue to which packet belongs.
     int i = 1;
     while (i < LSTF_NUM_QUEUES && q_bounds_[i] < curSlack) i++;
-    printf('Packet')
 
     // Drop a packet from the queue if the buffer is full. 
     if (q_curlen_[i] >= q_max_[i]){
