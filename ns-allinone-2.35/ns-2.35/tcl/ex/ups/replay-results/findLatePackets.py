@@ -1,6 +1,27 @@
 import sys
 
-lines = open(sys.argv[1]).readlines()
+# What the fuck is this file?
+# Takes a .compare file, max_trans_time number (default 11680), and outputs late-packets file.
+
+# arg format
+# 1 is the .compare file, 2 is the max_trans_time number (default is 11680).
+
+# pct format
+# Format: <PCT in nanoseconds> <source id> <dest id> <flow id> <seq in no.of packets> <time when packet reaches dest in sec> <time when packet reaches dest in nanoseconds>
+
+# fct format
+# Format: <FCT in nanoseconds> <source id> <dest id> <flow id> <no. of packets in flow - 1> <time when flow finishes in sec>
+
+# slacks format
+# Format: <source id> <dest id> <flow id> <seq num in flow> <slack value>
+
+# compare format
+# Format: <flowid> <seq in no. of packets> : <congestion free PCT> <PCT with LSTF> >  <original PCT> by <Difference between the two PCTs>
+
+# ratio format
+# Format: <flowid> <seq in no. of packets> : <PCT with LSTF> <original PCT> <Ratio of the two PCTs> <Relative difference between the two PCTs>
+
+lines = open(sys.argv[1]).readlines()               # .compare file
 max_trans_time = long(sys.argv[2])
 
 delay = dict()
@@ -19,10 +40,10 @@ for line in lines[:-1]:
 
     try:
         words = line.split()
-        diff = long(words[8])
+        diff = long(words[8])                                           # difference between lstf and orig pct
         if (diff in delay.keys()):
             delay[diff].append(
-                (words[0], int(long(words[3]) / 1000000), words[6]))
+                (words[0], int(long(words[3]) / 1000000), words[6]))    # (flowid, congestion free pct, orig pct)
         else:
             delay[diff] = list()
             delay[diff].append(
