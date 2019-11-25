@@ -131,7 +131,7 @@ void LstfQueue::enque(Packet* pkt)
 
     // Drop a packet if the buffer is full. 
     if (q_curlen_[i] >= q_max_[i]){
-         drop(pkt) 
+         drop(pkt);
          return;
     }
 
