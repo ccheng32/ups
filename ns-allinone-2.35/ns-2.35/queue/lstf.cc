@@ -1,9 +1,5 @@
 /* LSTF: Author - Radhika Mittal, UC Berkeley, radhika@eecs.berkeley.edu */
 
-# define ASSERT_WITH_MESSAGE(condition, message) do { \
-if (!(condition)) { printf((message)); } \
-assert ((condition)); } while(false)
-
 #include <math.h>
 #include <sys/types.h>
 #include "config.h"
@@ -56,7 +52,7 @@ LstfQueue::LstfQueue()
     //bind("q_bounds_7", &q_bounds_[7]);
 
     // Try FIFO FIRST
-    q_bounds_[1] = 1000000000;
+    q_bounds_[1] = 100000000000;
     q_bounds_[2] = 250000000;
     q_bounds_[3] = 375000000;
     q_bounds_[4] = 500000000;
@@ -93,7 +89,7 @@ LstfQueue::LstfQueue()
         q_curq_[i] = 0;
     } 
 
-    pq_ = bin_[1].q_; //does ns need this?
+    pq_ = bin_[0].q_; //does ns need this?
     reset();
 }
 
@@ -101,6 +97,16 @@ void LstfQueue::reset()
 {
     curq_ = 0;
     curlen_ = 0;
+
+    // initialize q_curlen_.
+    for (int i = 1; i <= LSTF_NUM_QUEUES; i++) {
+        q_curlen_[i] = 0;
+    } 
+        
+    // initialize q_curq_.
+    for (int i = 1; i <= LSTF_NUM_QUEUES; i++) {
+        q_curq_[i] = 0;
+    }
 
     Queue::reset();
 }
@@ -123,18 +129,10 @@ void LstfQueue::enque(Packet* pkt)
     while (i < LSTF_NUM_QUEUES && q_bounds_[i] < curSlack) i++;
     assert(1 <= i && i <= LSTF_NUM_QUEUES);
 
-    // Drop a packet from the queue if the buffer is full. 
+    // Drop a packet if the buffer is full. 
     if (q_curlen_[i] >= q_max_[i]){
-         Packet* tail_pkt = (bin_[i].q_)->tail();
-         (bin_[i].q_)->remove(tail_pkt);
-
-         curq_ -= HDR_CMN(tail_pkt)->size();
-         curlen_--;
-         
-         q_curq_[i] -= HDR_CMN(tail_pkt)->size();
-         q_curlen_[i]--;
-
-         drop(tail_pkt);
+         drop(pkt) 
+         return;
     }
 
     curq_ += HDR_CMN(pkt)->size();
