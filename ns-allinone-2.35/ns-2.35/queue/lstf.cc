@@ -130,6 +130,9 @@ void LstfQueue::enque(Packet* pkt)
 
     // Drop packet if the buffer is full. 
     if (q_curlen_[i] >= q_max_[i]){
+
+         assert(0);         // should never drop packets
+
          drop(pkt);
          return;
     }
@@ -156,7 +159,9 @@ void LstfQueue::enque(Packet* pkt)
     }
     //Enqueue control packets in higher priority control queue
     else {
-        assert(0);
+
+        assert(0);      // this should never trigger
+
         (bin_[0].q_)->enque(pkt);
         if (debug_)
             printf("%lf: Lstf: QueueID %d: Enqueuing packet from flow with id %d, seqno = %d, size = %d in control queue \n", Scheduler::instance().clock(), queueid_, iph->flowid(), seqNo, HDR_CMN(pkt)->size());
@@ -168,6 +173,9 @@ Packet* LstfQueue::deque()
     if (curlen_ > 0) {
         //first check control queue
         if ((bin_[0].q_)->length() > 0) {
+
+            assert(0);      // this should never trigger
+
             Packet* pkt;
             pkt = (bin_[0].q_)->deque();
             int seqNo = getSeqNo(pkt);
@@ -194,7 +202,12 @@ Packet* LstfQueue::deque()
                 q_curq_[i] -= HDR_CMN(pkt)->size();
 
                 long long int wait_time = (Scheduler::instance().clock() * kTime_) - (long long int)(HDR_CMN(pkt)->ts_ * kTime_);
+
+                assert(wait_time >= 0);
+
                 long long int new_slack = iph->prio() - wait_time;
+
+                assert(0 <= new_slack && new_slack <= 1000000000);
 
                 iph->prio() = new_slack;
 

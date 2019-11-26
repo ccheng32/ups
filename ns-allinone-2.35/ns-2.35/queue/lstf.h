@@ -35,10 +35,10 @@ protected:
 
     // 8 queues.
     bindesc bin_[1 + LSTF_NUM_QUEUES];          // the actual queues
-    long int q_bounds_[1 + LSTF_NUM_QUEUES];    // queue bounds
-    long int q_max_[1 + LSTF_NUM_QUEUES];       // max capacity of each queue
-    long int q_curlen_[1 + LSTF_NUM_QUEUES];    // number of packets in each queue
-    long int q_curq_[1 + LSTF_NUM_QUEUES];      // number of bytes in each queue
+    long long int q_bounds_[1 + LSTF_NUM_QUEUES];    // queue bounds
+    long long int q_max_[1 + LSTF_NUM_QUEUES];       // max capacity of each queue
+    long long int q_curlen_[1 + LSTF_NUM_QUEUES];    // number of packets in each queue
+    long long int q_curq_[1 + LSTF_NUM_QUEUES];      // number of bytes in each queue
 
     int curlen_;                                // the total occupancy of all bins in packets
     TracedInt curq_;                            // current qlen in bytes seen by arrivals
