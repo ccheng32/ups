@@ -51,8 +51,7 @@ LstfQueue::LstfQueue()
     //bind("q_bounds_6", &q_bounds_[6]);
     //bind("q_bounds_7", &q_bounds_[7]);
 
-    // Try FIFO FIRST
-    q_bounds_[1] = 100000000000;
+    q_bounds_[1] = 125000000;
     q_bounds_[2] = 250000000;
     q_bounds_[3] = 375000000;
     q_bounds_[4] = 500000000;
@@ -60,14 +59,14 @@ LstfQueue::LstfQueue()
     q_bounds_[6] = 750000000;
     q_bounds_[7] = 875000000;
 
-    q_max_[1] = 100000000;
-    q_max_[2] = 100000000;
-    q_max_[3] = 100000000;
-    q_max_[4] = 100000000;
-    q_max_[5] = 100000000;
-    q_max_[6] = 100000000;
-    q_max_[7] = 100000000;
-    q_max_[8] = 100000000;
+    q_max_[1] = 10000000000000;
+    q_max_[2] = 10000000000000;
+    q_max_[3] = 10000000000000;
+    q_max_[4] = 10000000000000;
+    q_max_[5] = 10000000000000;
+    q_max_[6] = 10000000000000;
+    q_max_[7] = 10000000000000;
+    q_max_[8] = 10000000000000;
 
     // q_max bindings.  
     //bind("q_max_1", &q_max_[1]);
@@ -129,7 +128,7 @@ void LstfQueue::enque(Packet* pkt)
     while (i < LSTF_NUM_QUEUES && q_bounds_[i] < curSlack) i++;
     assert(1 <= i && i <= LSTF_NUM_QUEUES);
 
-    // Drop a packet if the buffer is full. 
+    // Drop packet if the buffer is full. 
     if (q_curlen_[i] >= q_max_[i]){
          drop(pkt);
          return;
@@ -157,6 +156,7 @@ void LstfQueue::enque(Packet* pkt)
     }
     //Enqueue control packets in higher priority control queue
     else {
+        assert(0);
         (bin_[0].q_)->enque(pkt);
         if (debug_)
             printf("%lf: Lstf: QueueID %d: Enqueuing packet from flow with id %d, seqno = %d, size = %d in control queue \n", Scheduler::instance().clock(), queueid_, iph->flowid(), seqNo, HDR_CMN(pkt)->size());
