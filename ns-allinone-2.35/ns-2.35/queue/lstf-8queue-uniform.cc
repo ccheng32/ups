@@ -52,15 +52,23 @@ LstfQueue::LstfQueue()
     //bind("q_bounds_5", &q_bounds_[5]);
     //bind("q_bounds_6", &q_bounds_[6]);
     //bind("q_bounds_7", &q_bounds_[7]);
-    //
 
-    for (int i = 1; i <= LSTF_NUM_QUEUES-1; ++i){
-        q_bounds_[i] = i*(125000000/8) - 125000000;
-    }
+    q_bounds_[1] = 125000000;
+    q_bounds_[2] = 250000000;
+    q_bounds_[3] = 375000000;
+    q_bounds_[4] = 500000000;
+    q_bounds_[5] = 625000000;
+    q_bounds_[6] = 750000000;
+    q_bounds_[7] = 875000000;
 
-    for (int i = 1; i <= LSTF_NUM_QUEUES; ++i){
-	q_max_[i] = 10000000000000;
-    }
+    q_max_[1] = 10000000000000;
+    q_max_[2] = 10000000000000;
+    q_max_[3] = 10000000000000;
+    q_max_[4] = 10000000000000;
+    q_max_[5] = 10000000000000;
+    q_max_[6] = 10000000000000;
+    q_max_[7] = 10000000000000;
+    q_max_[8] = 10000000000000;
 
     // q_max bindings.  
     //bind("q_max_1", &q_max_[1]);

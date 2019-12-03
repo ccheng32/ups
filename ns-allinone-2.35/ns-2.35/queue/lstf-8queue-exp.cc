@@ -55,7 +55,7 @@ LstfQueue::LstfQueue()
     //
 
     for (int i = 1; i <= LSTF_NUM_QUEUES-1; ++i){
-        q_bounds_[i] = i*(125000000/8) - 125000000;
+        q_bounds_[i] = i*i*(125000000/50);
     }
 
     for (int i = 1; i <= LSTF_NUM_QUEUES; ++i){

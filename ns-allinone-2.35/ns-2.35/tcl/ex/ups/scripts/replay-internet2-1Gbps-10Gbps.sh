@@ -3,10 +3,10 @@ cd ..
 
 
 #send a packet from every scource-dest on an empty network to get congestion-free minimum traversal time for a packet
-./sim-udp-base.tcl  -simtime 10000 -gw DropTail -maxq 100000000 -pktsize 1460 -topofolder scenarios/internet2-1Gbps-10Gbps -workloadfile workload-init.txt > replay-results/init.internet2-1Gbps-10Gbps
+#./sim-udp-base.tcl  -simtime 10000 -gw DropTail -maxq 100000000 -pktsize 1460 -topofolder scenarios/internet2-1Gbps-10Gbps -workloadfile workload-init.txt > replay-results/init.internet2-1Gbps-10Gbps
 
-mv pcts.txt replay-results/init.internet2-1Gbps-10Gbps.pcts
-mv fcts.txt replay-results/init.internet2-1Gbps-10Gbps.fcts
+#mv pcts.txt replay-results/init.internet2-1Gbps-10Gbps.pcts
+#mv fcts.txt replay-results/init.internet2-1Gbps-10Gbps.fcts
 
 for util in 70
 do
@@ -21,10 +21,10 @@ for core in randomDequeue DropTail Lifo sfqCoDel
 do
 	
         # get the original schedule
-	./sim-udp-base.tcl  -simtime 1 -gw $core -maxq 100000000 -pktsize 1460 -codel_target 1000.0 -maxbins 1024 -topofolder scenarios/internet2-1Gbps-10Gbps -workloadfile workload-$util.txt > replay-results/$core.internet2-1Gbps-10Gbps-$util
+	#./sim-udp-base.tcl  -simtime 1 -gw $core -maxq 100000000 -pktsize 1460 -codel_target 1000.0 -maxbins 1024 -topofolder scenarios/internet2-1Gbps-10Gbps -workloadfile workload-$util.txt > replay-results/$core.internet2-1Gbps-10Gbps-$util
 	
-	mv pcts.txt replay-results/$core.internet2-1Gbps-10Gbps-$util.pcts
-	mv fcts.txt replay-results/$core.internet2-1Gbps-10Gbps-$util.fcts
+	#mv pcts.txt replay-results/$core.internet2-1Gbps-10Gbps-$util.pcts
+	#mv fcts.txt replay-results/$core.internet2-1Gbps-10Gbps-$util.fcts
 	echo "Original done"
 
         # get slacks
@@ -37,6 +37,7 @@ do
 	./sim-udp-lstf.tcl  -simtime 1 -gw edgeReplay -maxq 100000000 -pktsize 1460 -topofolder scenarios/internet2-1Gbps-10Gbps -workloadfile workload-$util.txt > replay-results/lstf-$core.internet2-1Gbps-10Gbps-$util
         mv pcts.txt replay-results/lstf-$core.internet2-1Gbps-10Gbps-$util.pcts
         mv fcts.txt replay-results/lstf-$core.internet2-1Gbps-10Gbps-$util.fcts
+	mv usage.txt replay-results/lstf-$core.internet2-1Gbps-10Gbps-$util.usage
 	echo "LSTF done"
 
         rm slacks.txt
@@ -48,5 +49,5 @@ done
 done
 
 # find % of packets delayed 
-cd replay-results
-./get-num-late-packets.sh
+#cd replay-results
+#./get-num-late-packets.sh
